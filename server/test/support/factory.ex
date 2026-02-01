@@ -58,7 +58,7 @@ defmodule Bridge.Factory do
   def subtask_factory do
     %Bridge.Lists.Subtask{
       title: Faker.Lorem.sentence(2..4),
-      status: "todo",
+      is_completed: false,
       notes: Faker.Lorem.sentence(1..2)
     }
   end
@@ -90,6 +90,16 @@ defmodule Bridge.Factory do
     %Bridge.Projects.ProjectItem{
       item_type: "doc",
       item_id: UUIDv7.generate()
+    }
+  end
+
+  def notification_factory do
+    %Bridge.Notifications.Notification{
+      type: "mention",
+      entity_type: "message",
+      entity_id: UUIDv7.generate(),
+      context: %{},
+      read: false
     }
   end
 end

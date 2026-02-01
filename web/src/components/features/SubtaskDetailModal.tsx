@@ -18,6 +18,7 @@ interface SubtaskDetailModalProps {
   workspaceMembers?: User[];
   onClose: () => void;
   onDeleted?: () => void;
+  highlightCommentId?: string | null;
 }
 
 export function SubtaskDetailModal({
@@ -26,6 +27,7 @@ export function SubtaskDetailModal({
   workspaceMembers = [],
   onClose,
   onDeleted,
+  highlightCommentId,
 }: SubtaskDetailModalProps) {
   const [openThread, setOpenThread] = useState<MessageType | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -78,6 +80,36 @@ export function SubtaskDetailModal({
       titleInputRef.current.select();
     }
   }, [editingTitle]);
+
+  // Scroll to and highlight comment if highlightCommentId is provided
+  useEffect(() => {
+    if (highlightCommentId && comments.length > 0) {
+      // Small delay to ensure the DOM is rendered
+      setTimeout(() => {
+        const messageElement = document.getElementById(
+          `subtask-message-${highlightCommentId}`,
+        );
+        if (messageElement) {
+          messageElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          messageElement.classList.add(
+            "ring-2",
+            "ring-blue-500/50",
+            "bg-blue-500/10",
+          );
+          setTimeout(() => {
+            messageElement.classList.remove(
+              "ring-2",
+              "ring-blue-500/50",
+              "bg-blue-500/10",
+            );
+          }, 3000);
+        }
+      }, 300);
+    }
+  }, [highlightCommentId, comments]);
 
   const handleLocalAssigneeChange = (assigneeId: string | null) => {
     setLocalAssigneeId(assigneeId || undefined);

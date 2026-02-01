@@ -169,6 +169,7 @@ export function BoardView() {
   const viewMode = (searchParams.get("view") as "board" | "table") || "board";
   const selectedTaskId = searchParams.get("task");
   const selectedSubtaskId = searchParams.get("subtask");
+  const highlightCommentId = searchParams.get("comment");
 
   const setViewMode = (mode: "board" | "table") => {
     const newParams = new URLSearchParams(searchParams);
@@ -729,6 +730,7 @@ export function BoardView() {
           workspaceMembers={workspaceMembers}
           onClose={handleCloseTask}
           onSubtaskClick={handleSubtaskClick}
+          highlightCommentId={highlightCommentId}
         />
       )}
 
@@ -739,6 +741,7 @@ export function BoardView() {
           comments={messages[`subtask:${selectedSubtaskId}`] || []}
           workspaceMembers={workspaceMembers}
           onClose={handleCloseSubtask}
+          highlightCommentId={highlightCommentId}
         />
       )}
 

@@ -13,14 +13,24 @@ interface Workspace {
   slug: string;
 }
 
+interface WorkspaceMember {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  online: boolean;
+}
+
 interface AuthState {
   user: User | null;
   workspace: Workspace | null;
+  members: WorkspaceMember[];
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  fetchMembers: () => Promise<void>;
   updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
   updateWorkspace: (data: { name?: string; slug?: string }) => Promise<void>;
   // Permission helpers
@@ -32,6 +42,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   workspace: null,
+  members: [],
   isAuthenticated: false,
   isLoading: true,
 
@@ -64,7 +75,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.error("Logout request failed:", error);
     } finally {
       api.clearToken();
-      set({ user: null, workspace: null, isAuthenticated: false });
+      set({ user: null, workspace: null, members: [], isAuthenticated: false });
     }
   },
 
@@ -86,6 +97,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({
           user: null,
           workspace: null,
+          members: [],
           isAuthenticated: false,
           isLoading: false,
         });
@@ -94,9 +106,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({
         user: null,
         workspace: null,
+        members: [],
         isAuthenticated: false,
         isLoading: false,
       });
+    }
+  },
+
+  fetchMembers: async () => {
+    try {
+      const members = await api.get<WorkspaceMember[]>("/workspace/members");
+      set({ members });
+    } catch (error) {
+      console.error("Failed to fetch workspace members:", error);
     }
   },
 

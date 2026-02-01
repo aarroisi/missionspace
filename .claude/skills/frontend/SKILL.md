@@ -36,6 +36,37 @@ ALWAYS start with writing tests before implementing features:
 
 ## Key Patterns
 
+### Always Use Reusable UI Components
+
+**ALWAYS** check for existing reusable components in `src/components/ui/` before implementing UI patterns. If a reusable component doesn't exist for a common pattern, create one.
+
+Available reusable components:
+
+- `Dropdown` - Dropdowns with click-outside handling and keyboard support
+- `ConfirmModal` - Confirmation dialogs for destructive actions
+- `Modal` - Base modal component
+- `Avatar` - User avatars
+- `RoleBadge` - Role display badges
+- `StatusBadge` - Status display badges
+- `Toast` - Toast notifications
+
+```typescript
+// ✅ CORRECT - Use existing Dropdown component
+import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
+
+<Dropdown
+  trigger={<button>Open Menu</button>}
+  align="left"
+>
+  <DropdownItem onClick={handleEdit}>Edit</DropdownItem>
+  <DropdownItem onClick={handleDelete} variant="danger">Delete</DropdownItem>
+</Dropdown>
+
+// ❌ WRONG - Custom dropdown without click-outside handling
+const [isOpen, setIsOpen] = useState(false);
+{isOpen && <div className="absolute ...">...</div>}
+```
+
 ### Never Use Browser Dialogs (alert, confirm, prompt)
 
 **NEVER** use browser native dialogs like `alert()`, `confirm()`, or `prompt()`. Always use the custom modal components:

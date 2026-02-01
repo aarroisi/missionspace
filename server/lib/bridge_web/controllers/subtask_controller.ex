@@ -73,6 +73,13 @@ defmodule BridgeWeb.SubtaskController do
     render(conn, :index, subtasks: subtasks)
   end
 
+  def index(conn, %{"assigned_to_me" => "true"}) do
+    current_user = conn.assigns.current_user
+    workspace_id = conn.assigns.workspace_id
+    subtasks = Lists.list_subtasks_by_assignee(current_user.id, workspace_id)
+    render(conn, :index, subtasks: subtasks)
+  end
+
   def index(conn, _params) do
     subtasks = []
     render(conn, :index, subtasks: subtasks)

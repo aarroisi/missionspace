@@ -13,14 +13,17 @@ import { WorkspaceMembersPage } from "./pages/WorkspaceMembersPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ToastContainer } from "./components/ui/Toast";
+import { MemberProfileProvider } from "./contexts/MemberProfileContext";
 import { useAuthStore } from "./stores/authStore";
 import { useProjectStore } from "./stores/projectStore";
 import { useBoardStore } from "./stores/boardStore";
 import { useDocStore } from "./stores/docStore";
 import { useChatStore } from "./stores/chatStore";
+import { useNotificationChannel } from "./hooks/useNotificationChannel";
 
 function App() {
-  const { checkAuth, isAuthenticated, isLoading } = useAuthStore();
+  const { checkAuth, fetchMembers, isAuthenticated, isLoading } =
+    useAuthStore();
   const { fetchProjects } = useProjectStore();
   const { fetchBoards } = useBoardStore();
   const { fetchDocs } = useDocStore();
@@ -37,6 +40,7 @@ function App() {
       fetchDocs();
       fetchChannels();
       fetchDirectMessages();
+      fetchMembers();
     }
   }, [
     isAuthenticated,
@@ -45,7 +49,11 @@ function App() {
     fetchDocs,
     fetchChannels,
     fetchDirectMessages,
+    fetchMembers,
   ]);
+
+  // Connect to notification channel for real-time updates
+  useNotificationChannel();
 
   if (isLoading) {
     return (
@@ -73,7 +81,7 @@ function App() {
   }
 
   return (
-    <>
+    <MemberProfileProvider>
       <Routes>
         <Route
           path="/"
@@ -211,7 +219,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ToastContainer />
-    </>
+    </MemberProfileProvider>
   );
 }
 

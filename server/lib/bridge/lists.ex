@@ -382,10 +382,12 @@ defmodule Bridge.Lists do
       [%Task{}, ...]
 
   """
-  def list_tasks_by_assignee(assignee_id) do
+  def list_tasks_by_assignee(assignee_id, workspace_id) do
     Task
-    |> where([t], t.assignee_id == ^assignee_id)
-    |> preload([:list, :assignee, :created_by, :subtasks])
+    |> join(:inner, [t], l in assoc(t, :list))
+    |> where([t, l], t.assignee_id == ^assignee_id and l.workspace_id == ^workspace_id)
+    |> order_by([t], desc: t.inserted_at)
+    |> preload([:list, :assignee, :created_by, :status, :subtasks])
     |> Repo.all()
   end
 
@@ -765,9 +767,12 @@ defmodule Bridge.Lists do
       [%Subtask{}, ...]
 
   """
-  def list_subtasks_by_assignee(assignee_id) do
+  def list_subtasks_by_assignee(assignee_id, workspace_id) do
     Subtask
-    |> where([s], s.assignee_id == ^assignee_id)
+    |> join(:inner, [s], t in assoc(s, :task))
+    |> join(:inner, [s, t], l in assoc(t, :list))
+    |> where([s, t, l], s.assignee_id == ^assignee_id and l.workspace_id == ^workspace_id)
+    |> order_by([s], desc: s.inserted_at)
     |> preload([:task, :assignee, :created_by])
     |> Repo.all()
   end

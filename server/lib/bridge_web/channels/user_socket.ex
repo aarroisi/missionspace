@@ -7,6 +7,7 @@ defmodule BridgeWeb.UserSocket do
   channel("doc:*", BridgeWeb.DocChannel)
   channel("channel:*", BridgeWeb.ChatChannel)
   channel("dm:*", BridgeWeb.ChatChannel)
+  channel("notifications:*", BridgeWeb.NotificationChannel)
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

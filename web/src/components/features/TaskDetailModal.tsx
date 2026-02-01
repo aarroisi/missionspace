@@ -34,6 +34,7 @@ interface TaskDetailModalProps {
   workspaceMembers?: User[];
   onClose: () => void;
   onSubtaskClick?: (subtaskId: string) => void;
+  highlightCommentId?: string | null;
 }
 
 export function TaskDetailModal({
@@ -44,6 +45,7 @@ export function TaskDetailModal({
   workspaceMembers = [],
   onClose,
   onSubtaskClick,
+  highlightCommentId,
 }: TaskDetailModalProps) {
   const [openThread, setOpenThread] = useState<MessageType | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -117,6 +119,36 @@ export function TaskDetailModal({
       titleInputRef.current.select();
     }
   }, [editingTitle]);
+
+  // Scroll to and highlight comment if highlightCommentId is provided
+  useEffect(() => {
+    if (highlightCommentId && comments.length > 0) {
+      // Small delay to ensure the DOM is rendered
+      setTimeout(() => {
+        const messageElement = document.getElementById(
+          `task-message-${highlightCommentId}`,
+        );
+        if (messageElement) {
+          messageElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          messageElement.classList.add(
+            "ring-2",
+            "ring-blue-500/50",
+            "bg-blue-500/10",
+          );
+          setTimeout(() => {
+            messageElement.classList.remove(
+              "ring-2",
+              "ring-blue-500/50",
+              "bg-blue-500/10",
+            );
+          }, 3000);
+        }
+      }, 300);
+    }
+  }, [highlightCommentId, comments]);
 
   const handleTitleSave = async () => {
     if (titleValue.trim() && titleValue !== task.title) {

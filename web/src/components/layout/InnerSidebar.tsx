@@ -438,6 +438,11 @@ export function InnerSidebar() {
               </button>
             </div>
             <div className="mt-1">
+              {safeProjects.length === 0 && (
+                <p className="px-3 py-2 text-sm text-dark-text-muted">
+                  No projects yet
+                </p>
+              )}
               {safeProjects.map((project) => {
                 const projectBoards = getProjectBoards(project.id);
                 const projectDocs = getProjectDocs(project.id);
@@ -525,8 +530,13 @@ export function InnerSidebar() {
                         )}
                       </div>
                     </div>
-                    {hasItems && isProjectActive && (
+                    {isProjectActive && (
                       <div className="ml-6 border-l border-dark-border">
+                        {!hasItems && (
+                          <p className="pl-3 py-1.5 text-xs text-dark-text-muted">
+                            No items yet
+                          </p>
+                        )}
                         {projectBoards.map((board) => {
                           const isActive = activeItemId === board.id;
                           return (
@@ -614,6 +624,11 @@ export function InnerSidebar() {
               </button>
             </div>
             <div className="mt-1">
+              {workspaceBoards.length === 0 && (
+                <p className="px-3 py-2 text-sm text-dark-text-muted">
+                  No boards yet
+                </p>
+              )}
               {workspaceBoards.map((board) => (
                 <button
                   key={board.id}
@@ -646,6 +661,11 @@ export function InnerSidebar() {
               </button>
             </div>
             <div className="mt-1">
+              {workspaceDocs.length === 0 && (
+                <p className="px-3 py-2 text-sm text-dark-text-muted">
+                  No docs yet
+                </p>
+              )}
               {workspaceDocs.map((doc) => (
                 <button
                   key={doc.id}
@@ -677,6 +697,11 @@ export function InnerSidebar() {
               </button>
             </div>
             <div className="mt-1">
+              {workspaceChannels.length === 0 && (
+                <p className="px-3 py-2 text-sm text-dark-text-muted">
+                  No channels yet
+                </p>
+              )}
               {workspaceChannels.map((channel) => (
                 <button
                   key={channel.id}
@@ -710,6 +735,11 @@ export function InnerSidebar() {
               </button>
             </div>
             <div className="mt-1">
+              {safeDirectMessages.length === 0 && (
+                <p className="px-3 py-2 text-sm text-dark-text-muted">
+                  No conversations yet
+                </p>
+              )}
               {safeDirectMessages.map((dm) => (
                 <button
                   key={dm.id}

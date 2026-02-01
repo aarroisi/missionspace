@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import {
+  useParams,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { MoreHorizontal, Star, Trash2 } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -14,6 +19,8 @@ export function ChatView() {
   const { id, projectId } = useParams<{ id: string; projectId?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightCommentId = searchParams.get("comment");
   const { setActiveItem } = useUIStore();
   const [openThread, setOpenThread] = useState<MessageType | null>(null);
   const {
@@ -183,6 +190,7 @@ export function ChatView() {
           }
           onLoadMore={handleLoadMore}
           isLoadingMore={isLoadingMore}
+          highlightCommentId={highlightCommentId}
         />
       </div>
 

@@ -2,6 +2,7 @@ defmodule BridgeWeb.DocController do
   use BridgeWeb, :controller
 
   alias Bridge.Docs
+  alias Bridge.Mentions
   alias Bridge.Authorization.Policy
   import BridgeWeb.PaginationHelpers
   import Plug.Conn
@@ -82,10 +83,45 @@ defmodule BridgeWeb.DocController do
 
   def update(conn, params) do
     doc = conn.assigns.doc
+    current_user = conn.assigns.current_user
+    old_content = doc.content || ""
     doc_params = Map.drop(params, ["id"])
 
-    with {:ok, doc} <- Docs.update_doc(doc, doc_params) do
-      render(conn, :show, doc: doc)
+    with {:ok, updated_doc} <- Docs.update_doc(doc, doc_params) do
+      # Check for new mentions in content and create notifications
+      new_content = updated_doc.content || ""
+
+      if new_content != old_content do
+        Task.start(fn ->
+          # Find mentions that are in new content but not in old content
+          old_mentions = Mentions.extract_mention_ids(old_content) |> MapSet.new()
+          new_mentions = Mentions.extract_mention_ids(new_content) |> MapSet.new()
+          added_mentions = MapSet.difference(new_mentions, old_mentions) |> MapSet.to_list()
+
+          # Create notifications for newly mentioned users
+          Enum.each(added_mentions, fn user_id ->
+            if user_id != current_user.id do
+              case Bridge.Notifications.create_notification(%{
+                     type: "mention",
+                     entity_type: "doc",
+                     entity_id: updated_doc.id,
+                     user_id: user_id,
+                     actor_id: current_user.id,
+                     context: %{docId: updated_doc.id, docTitle: updated_doc.title}
+                   }) do
+                {:ok, notification} ->
+                  notification = Bridge.Repo.preload(notification, [:actor])
+                  Mentions.broadcast_notification(notification)
+
+                _ ->
+                  :ok
+              end
+            end
+          end)
+        end)
+      end
+
+      render(conn, :show, doc: updated_doc)
     end
   end
 

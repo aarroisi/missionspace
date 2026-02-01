@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   useParams,
   useSearchParams,
@@ -8,6 +8,7 @@ import {
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { createMentionExtension } from "@/lib/mention";
 import {
   Bold,
   Italic,
@@ -35,6 +36,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useProjectStore } from "@/stores/projectStore";
 import { useToastStore } from "@/stores/toastStore";
+import { useAuthStore } from "@/stores/authStore";
 import { Message as MessageType, Doc } from "@/types";
 import { clsx } from "clsx";
 
@@ -58,6 +60,7 @@ export function DocView() {
 
   // Get initial edit mode from URL
   const editParam = searchParams.get("edit");
+  const highlightCommentId = searchParams.get("comment");
   const [isEditing, setIsEditing] = useState(isNewDoc || editParam === "true");
   const [openThread, setOpenThread] = useState<MessageType | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -84,12 +87,28 @@ export function DocView() {
   const topLevelComments = docComments.filter((c) => !c.parentId);
   const threadMessages = docComments.filter((c) => c.parentId);
 
+  const { members } = useAuthStore();
+
+  // Convert workspace members to mention format
+  const mentionMembers = useMemo(
+    () =>
+      members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        avatar: m.avatar,
+        online: m.online,
+      })),
+    [members],
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({
         placeholder: "Start writing...",
       }),
+      createMentionExtension({ members: mentionMembers }),
     ],
     content: doc?.content || "",
     editable: isEditing,
@@ -299,6 +318,36 @@ export function DocView() {
       setOpenThread(null);
     }
   }, [searchParams, docComments]);
+
+  // Scroll to and highlight comment if highlightCommentId is provided
+  useEffect(() => {
+    if (highlightCommentId && docComments.length > 0) {
+      // Small delay to ensure the DOM is rendered
+      setTimeout(() => {
+        const messageElement = document.getElementById(
+          `message-${highlightCommentId}`,
+        );
+        if (messageElement) {
+          messageElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          messageElement.classList.add(
+            "ring-2",
+            "ring-blue-500/50",
+            "bg-blue-500/10",
+          );
+          setTimeout(() => {
+            messageElement.classList.remove(
+              "ring-2",
+              "ring-blue-500/50",
+              "bg-blue-500/10",
+            );
+          }, 3000);
+        }
+      }, 300);
+    }
+  }, [highlightCommentId, docComments]);
 
   useEffect(() => {
     if (editor) {

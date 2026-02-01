@@ -2,6 +2,7 @@ defmodule BridgeWeb.MessageController do
   use BridgeWeb, :controller
 
   alias Bridge.Chat
+  alias Bridge.Mentions
   alias Bridge.Authorization.Policy
   import Plug.Conn
 
@@ -124,6 +125,7 @@ defmodule BridgeWeb.MessageController do
 
   def create(conn, params) do
     current_user = conn.assigns.current_user
+    workspace_id = conn.assigns.workspace_id
 
     # Support both camelCase (frontend) and snake_case (tests) params
     attrs = %{
@@ -138,6 +140,12 @@ defmodule BridgeWeb.MessageController do
     with {:ok, message} <- Chat.create_message(attrs) do
       # Preload associations
       message = Bridge.Repo.preload(message, [:user, :parent, quote: [:user]])
+
+      # Create notifications for mentioned users (async, don't block response)
+      Task.start(fn ->
+        context = Mentions.build_notification_context(message, workspace_id)
+        Mentions.create_notifications_for_mentions(message, current_user.id, context)
+      end)
 
       conn
       |> put_status(:created)

@@ -57,6 +57,13 @@ defmodule BridgeWeb.TaskController do
     conn.assigns[:task]
   end
 
+  def index(conn, %{"assigned_to_me" => "true"}) do
+    current_user = conn.assigns.current_user
+    workspace_id = conn.assigns.workspace_id
+    tasks = Lists.list_tasks_by_assignee(current_user.id, workspace_id)
+    render(conn, :index, tasks: tasks)
+  end
+
   def index(conn, params) do
     # Accept both board_id and list_id for backwards compatibility
     board_id = params["board_id"] || params["list_id"]

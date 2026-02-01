@@ -1,11 +1,51 @@
-import { useEffect, forwardRef, useImperativeHandle } from "react";
+import {
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from "react";
 import { Bold, Italic, List, ListOrdered, Quote, X } from "lucide-react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import DOMPurify from "dompurify";
 import { Message as MessageType } from "@/types";
 import { clsx } from "clsx";
+import { useAuthStore } from "@/stores/authStore";
+import { createMentionExtension } from "@/lib/mention";
+
+// Custom extension to handle Enter key for submission
+// Checks if mention popup is active before submitting
+const createSubmitExtension = (
+  onSubmit: () => void,
+  isMentionActiveRef: React.MutableRefObject<boolean>,
+) =>
+  Extension.create({
+    name: "submitOnEnter",
+    priority: 1000, // High priority to run before StarterKit
+
+    addKeyboardShortcuts() {
+      return {
+        Enter: () => {
+          // Don't submit if mention popup is active
+          if (isMentionActiveRef.current) {
+            return false; // Let mention handle it
+          }
+          onSubmit();
+          return true;
+        },
+        "Shift-Enter": ({ editor }) => {
+          // Insert a hard break (new line)
+          editor.commands.first(({ commands }) => [
+            () => commands.newlineInCode(),
+            () => commands.splitBlock(),
+          ]);
+          return true;
+        },
+      };
+    },
+  });
 
 interface CommentEditorProps {
   value: string;
@@ -35,28 +75,60 @@ export const CommentEditor = forwardRef<
     },
     ref,
   ) => {
+    const { members } = useAuthStore();
+    const onSubmitRef = useRef(onSubmit);
+    const isMentionActiveRef = useRef(false);
+
+    // Keep ref updated
+    useEffect(() => {
+      onSubmitRef.current = onSubmit;
+    }, [onSubmit]);
+
+    // Convert workspace members to mention format
+    const mentionMembers = useMemo(
+      () =>
+        members.map((m) => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          avatar: m.avatar,
+          online: m.online,
+        })),
+      [members],
+    );
+
+    // Memoize extensions to avoid recreating editor
+    const mentionExtension = useMemo(
+      () =>
+        createMentionExtension({
+          members: mentionMembers,
+          onActiveChange: (isActive) => {
+            isMentionActiveRef.current = isActive;
+          },
+        }),
+      [mentionMembers],
+    );
+
+    const submitExtension = useMemo(
+      () =>
+        createSubmitExtension(() => onSubmitRef.current(), isMentionActiveRef),
+      [],
+    );
+
     const editor = useEditor({
       extensions: [
         StarterKit,
         Placeholder.configure({
           placeholder,
         }),
+        mentionExtension,
+        submitExtension,
       ],
       content: value,
       editorProps: {
         attributes: {
           class:
             "flex-1 bg-transparent text-dark-text placeholder:text-dark-text-muted focus:outline-none resize-none leading-6 text-base prose prose-invert max-w-none",
-        },
-        handleKeyDown: (_view, event) => {
-          // Enter without Shift sends the message
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            onSubmit();
-            return true;
-          }
-          // Shift+Enter adds a line break (default behavior)
-          return false;
         },
       },
       onUpdate: ({ editor }) => {
@@ -179,8 +251,21 @@ export const CommentEditor = forwardRef<
                   className="text-dark-text-muted truncate prose prose-invert prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(quotingMessage.text, {
-                      ALLOWED_TAGS: ["p", "br", "strong", "em", "u", "s"],
-                      ALLOWED_ATTR: [],
+                      ALLOWED_TAGS: [
+                        "p",
+                        "br",
+                        "strong",
+                        "em",
+                        "u",
+                        "s",
+                        "span",
+                      ],
+                      ALLOWED_ATTR: [
+                        "class",
+                        "data-id",
+                        "data-type",
+                        "data-label",
+                      ],
                     }),
                   }}
                 />

@@ -13,6 +13,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { Category } from "@/types";
 import { ProfileMenu } from "@/components/features/ProfileMenu";
+import { NotificationBell } from "@/components/features/NotificationBell";
 
 const categories: { id: Category; icon: any; label: string }[] = [
   { id: "home", icon: Home, label: "Home" },
@@ -85,6 +86,8 @@ export function OuterSidebar() {
       </div>
 
       <div className="flex-1" />
+
+      <NotificationBell />
 
       {isOwner() && (
         <button

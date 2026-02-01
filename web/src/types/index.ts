@@ -106,6 +106,12 @@ export interface Subtask {
   completedAt?: string | null;
   insertedAt: string;
   updatedAt: string;
+  // Optional task info (included when fetching subtasks with task preloaded)
+  task?: {
+    id: string;
+    boardId: string;
+    title: string;
+  };
 }
 
 // Doc types
@@ -183,4 +189,20 @@ export type Category =
 export interface ActiveItem {
   type: Category;
   id?: string;
+}
+
+// Notification types
+export interface Notification {
+  id: string;
+  type: "mention";
+  entityType: "message" | "doc" | "task" | "subtask";
+  entityId: string;
+  context: Record<string, unknown>;
+  read: boolean;
+  userId: string;
+  actorId: string;
+  actorName?: string;
+  actorAvatar?: string;
+  insertedAt: string;
+  updatedAt: string;
 }

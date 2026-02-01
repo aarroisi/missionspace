@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, ChevronDown } from "lucide-react";
-import { clsx } from "clsx";
+import { Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { User, Role } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownDivider,
+} from "@/components/ui/Dropdown";
 import { toast } from "@/components/ui/Toast";
 
 interface WorkspaceMember extends User {
@@ -18,10 +22,12 @@ export function WorkspaceMembersPage() {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState<WorkspaceMember | null>(
+    null,
+  );
   const [memberToDelete, setMemberToDelete] = useState<WorkspaceMember | null>(
     null,
   );
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState<string | null>(null);
 
   // Fetch members
   useEffect(() => {
@@ -40,17 +46,20 @@ export function WorkspaceMembersPage() {
     fetchMembers();
   }, []);
 
-  const handleRoleChange = async (memberId: string, newRole: Role) => {
+  const handleUpdateMember = async (
+    memberId: string,
+    data: { name?: string; role?: Role },
+  ) => {
     try {
-      await api.put(`/workspace/members/${memberId}`, { role: newRole });
+      await api.patch(`/workspace/members/${memberId}`, data);
       setMembers((prev) =>
-        prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m)),
+        prev.map((m) => (m.id === memberId ? { ...m, ...data } : m)),
       );
-      setRoleDropdownOpen(null);
-      toast.success("Role updated successfully");
+      setMemberToEdit(null);
+      toast.success("Member updated successfully");
     } catch (error) {
-      console.error("Failed to update role:", error);
-      toast.error("Failed to update role");
+      console.error("Failed to update member:", error);
+      toast.error("Failed to update member");
     }
   };
 
@@ -124,43 +133,8 @@ export function WorkspaceMembersPage() {
               </div>
             </div>
 
-            <div className="col-span-3 relative">
-              {member.id === currentUser?.id ? (
-                <RoleBadge role={member.role} />
-              ) : (
-                <div className="relative">
-                  <button
-                    onClick={() =>
-                      setRoleDropdownOpen(
-                        roleDropdownOpen === member.id ? null : member.id,
-                      )
-                    }
-                    className="flex items-center gap-1 hover:bg-dark-hover rounded px-2 py-1 transition-colors"
-                  >
-                    <RoleBadge role={member.role} />
-                    <ChevronDown size={14} className="text-dark-text-muted" />
-                  </button>
-
-                  {roleDropdownOpen === member.id && (
-                    <div className="absolute top-full left-0 mt-1 bg-dark-surface border border-dark-border rounded-lg shadow-lg z-10 py-1 min-w-[120px]">
-                      {(["owner", "member", "guest"] as Role[]).map((role) => (
-                        <button
-                          key={role}
-                          onClick={() => handleRoleChange(member.id, role)}
-                          className={clsx(
-                            "w-full px-3 py-2 text-left text-sm hover:bg-dark-hover transition-colors",
-                            member.role === role
-                              ? "text-blue-400"
-                              : "text-dark-text",
-                          )}
-                        >
-                          {role.charAt(0).toUpperCase() + role.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+            <div className="col-span-3">
+              <RoleBadge role={member.role} />
             </div>
 
             <div className="col-span-3 text-sm text-dark-text-muted">
@@ -169,13 +143,31 @@ export function WorkspaceMembersPage() {
 
             <div className="col-span-1 flex justify-end">
               {member.id !== currentUser?.id && (
-                <button
-                  onClick={() => setMemberToDelete(member)}
-                  className="p-2 text-dark-text-muted hover:text-red-400 hover:bg-dark-hover rounded transition-colors"
-                  title="Remove member"
+                <Dropdown
+                  trigger={
+                    <button className="p-2 text-dark-text-muted hover:text-dark-text hover:bg-dark-hover rounded transition-colors">
+                      <MoreVertical size={16} />
+                    </button>
+                  }
+                  align="right"
                 >
-                  <Trash2 size={16} />
-                </button>
+                  <DropdownItem onClick={() => setMemberToEdit(member)}>
+                    <span className="flex items-center gap-2">
+                      <Pencil size={14} />
+                      Edit
+                    </span>
+                  </DropdownItem>
+                  <DropdownDivider />
+                  <DropdownItem
+                    variant="danger"
+                    onClick={() => setMemberToDelete(member)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Trash2 size={14} />
+                      Remove
+                    </span>
+                  </DropdownItem>
+                </Dropdown>
               )}
             </div>
           </div>
@@ -195,6 +187,14 @@ export function WorkspaceMembersPage() {
             setMembers((prev) => [...prev, newMember]);
             setShowInviteModal(false);
           }}
+        />
+      )}
+
+      {memberToEdit && (
+        <EditMemberModal
+          member={memberToEdit}
+          onClose={() => setMemberToEdit(null)}
+          onSave={(data) => handleUpdateMember(memberToEdit.id, data)}
         />
       )}
 
@@ -318,7 +318,7 @@ function InviteMemberModal({ onClose, onInvite }: InviteMemberModalProps) {
               id="invite-role"
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 pr-10 bg-dark-bg border border-dark-border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[position:right_0.75rem_center] bg-no-repeat"
             >
               <option value="owner">Owner - Full access</option>
               <option value="member">Member - Assigned projects only</option>
@@ -342,6 +342,108 @@ function InviteMemberModal({ onClose, onInvite }: InviteMemberModalProps) {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               {loading ? "Inviting..." : "Invite"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface EditMemberModalProps {
+  member: WorkspaceMember;
+  onClose: () => void;
+  onSave: (data: { name?: string; role?: Role }) => void;
+}
+
+function EditMemberModal({ member, onClose, onSave }: EditMemberModalProps) {
+  const [role, setRole] = useState<Role>(member.role);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await onSave({ role });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-dark-surface border border-dark-border rounded-lg w-full max-w-md p-6">
+        <h2 className="text-xl font-semibold text-dark-text mb-4">
+          Edit Member
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="edit-name"
+              className="block text-sm font-medium text-dark-text mb-1"
+            >
+              Name
+            </label>
+            <input
+              id="edit-name"
+              type="text"
+              value={member.name}
+              disabled
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-dark-text-muted cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="edit-email"
+              className="block text-sm font-medium text-dark-text mb-1"
+            >
+              Email
+            </label>
+            <input
+              id="edit-email"
+              type="email"
+              value={member.email}
+              disabled
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-dark-text-muted cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="edit-role"
+              className="block text-sm font-medium text-dark-text mb-1"
+            >
+              Role
+            </label>
+            <select
+              id="edit-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as Role)}
+              className="w-full px-3 py-2 pr-10 bg-dark-bg border border-dark-border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[position:right_0.75rem_center] bg-no-repeat"
+            >
+              <option value="owner">Owner - Full access</option>
+              <option value="member">Member - Assigned projects only</option>
+              <option value="guest">Guest - One project only</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-dark-text hover:bg-dark-hover rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Save"}
             </button>
           </div>
         </form>

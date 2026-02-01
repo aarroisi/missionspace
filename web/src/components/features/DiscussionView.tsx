@@ -22,6 +22,7 @@ interface DiscussionViewProps {
   hasMoreMessages?: boolean;
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
+  highlightCommentId?: string | null;
 }
 
 export function DiscussionView({
@@ -38,6 +39,7 @@ export function DiscussionView({
   hasMoreMessages = false,
   onLoadMore,
   isLoadingMore = false,
+  highlightCommentId,
 }: DiscussionViewProps) {
   const [_internalOpenThread, _setInternalOpenThread] =
     useState<MessageType | null>(null);
@@ -53,6 +55,36 @@ export function DiscussionView({
   const sortedMessages = [...messages].reverse();
   const topLevelMessages = sortedMessages.filter((m) => !m.parentId);
   const threadMessages = sortedMessages.filter((m) => m.parentId);
+
+  // Scroll to and highlight comment if highlightCommentId is provided
+  useEffect(() => {
+    if (highlightCommentId && sortedMessages.length > 0) {
+      // Small delay to ensure the DOM is rendered
+      setTimeout(() => {
+        const messageElement = document.getElementById(
+          `message-${highlightCommentId}`,
+        );
+        if (messageElement) {
+          messageElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          messageElement.classList.add(
+            "ring-2",
+            "ring-blue-500/50",
+            "bg-blue-500/10",
+          );
+          setTimeout(() => {
+            messageElement.classList.remove(
+              "ring-2",
+              "ring-blue-500/50",
+              "bg-blue-500/10",
+            );
+          }, 3000);
+        }
+      }, 300);
+    }
+  }, [highlightCommentId, sortedMessages.length]);
 
   const getThreadReplies = (messageId: string) => {
     return threadMessages.filter((m) => m.parentId === messageId);

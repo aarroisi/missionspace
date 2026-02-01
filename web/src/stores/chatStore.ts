@@ -250,7 +250,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   updateMessage: async (id: string, text: string) => {
-    await api.patch(`/messages/${id}`, { text });
+    const updatedMessage = await api.patch<Message>(`/messages/${id}`, {
+      text,
+    });
+    set((state) => {
+      const newMessages = { ...state.messages };
+      Object.keys(newMessages).forEach((key) => {
+        newMessages[key] = newMessages[key].map((m) =>
+          m.id === id
+            ? {
+                ...m,
+                text: updatedMessage.text,
+                updatedAt: updatedMessage.updatedAt,
+              }
+            : m,
+        );
+      });
+      return { messages: newMessages };
+    });
   },
 
   deleteMessage: async (id: string) => {

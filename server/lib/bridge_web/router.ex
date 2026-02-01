@@ -30,7 +30,7 @@ defmodule BridgeWeb.Router do
     put("/workspace", WorkspaceController, :update)
 
     # Workspace member management (owner only)
-    resources("/workspace/members", WorkspaceMemberController, except: [:new, :edit, :show])
+    resources("/workspace/members", WorkspaceMemberController, except: [:new, :edit])
 
     # Project member management (owner only)
     resources("/projects/:project_id/members", ProjectMemberController,
@@ -57,6 +57,12 @@ defmodule BridgeWeb.Router do
     resources("/channels", ChannelController, except: [:new, :edit])
     resources("/direct_messages", DirectMessageController, except: [:new, :edit])
     resources("/messages", MessageController, except: [:new, :edit])
+
+    # Notification routes
+    get("/notifications", NotificationController, :index)
+    patch("/notifications/:id/read", NotificationController, :mark_as_read)
+    post("/notifications/read-all", NotificationController, :mark_all_as_read)
+    get("/notifications/unread-count", NotificationController, :unread_count)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

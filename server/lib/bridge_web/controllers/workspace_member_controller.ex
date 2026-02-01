@@ -6,12 +6,21 @@ defmodule BridgeWeb.WorkspaceMemberController do
 
   action_fallback(BridgeWeb.FallbackController)
 
-  plug(:authorize)
+  # Only require manage permission for create/update/delete, not index/show
+  plug(:authorize when action in [:create, :update, :delete])
 
   def index(conn, _params) do
     workspace_id = conn.assigns.workspace_id
     members = Accounts.list_workspace_users(workspace_id)
     render(conn, :index, members: members)
+  end
+
+  def show(conn, %{"id" => id}) do
+    workspace_id = conn.assigns.workspace_id
+
+    with {:ok, user} <- Accounts.get_workspace_user(id, workspace_id) do
+      render(conn, :show, member: user)
+    end
   end
 
   def create(conn, params) do

@@ -23,7 +23,7 @@ defmodule BridgeWeb.SubtaskJSON do
   end
 
   defp data(%Subtask{} = subtask) do
-    %{
+    base = %{
       id: subtask.id,
       title: subtask.title,
       is_completed: subtask.is_completed,
@@ -38,6 +38,15 @@ defmodule BridgeWeb.SubtaskJSON do
       inserted_at: subtask.inserted_at,
       updated_at: subtask.updated_at
     }
+
+    # Include task info if preloaded
+    case subtask.task do
+      %{id: _, list_id: board_id, title: task_title} ->
+        Map.put(base, :task, %{id: subtask.task_id, board_id: board_id, title: task_title})
+
+      _ ->
+        base
+    end
   end
 
   defp get_assignee(%Subtask{assignee: %{id: id, name: name, email: email}}),
