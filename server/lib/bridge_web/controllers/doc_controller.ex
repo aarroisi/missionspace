@@ -51,14 +51,31 @@ defmodule BridgeWeb.DocController do
     conn.assigns[:doc]
   end
 
+  def index(conn, %{"starred" => "true"} = params) do
+    workspace_id = conn.assigns.workspace_id
+    user = conn.assigns.current_user
+    opts = build_pagination_opts(params)
+    page = Docs.list_starred_docs(workspace_id, user.id, opts)
+    entries = Bridge.Stars.mark_starred(page.entries, user.id, "doc")
+    render(conn, :index, page: %{page | entries: entries})
+  end
+
   def index(conn, params) do
     workspace_id = conn.assigns.workspace_id
     user = conn.assigns.current_user
 
     opts = build_pagination_opts(params)
-    page = Docs.list_docs(workspace_id, user, opts)
 
-    render(conn, :index, page: page)
+    opts =
+      case params["doc_folder_id"] do
+        nil -> opts
+        folder_id -> Keyword.put(opts, :doc_folder_id, folder_id)
+      end
+
+    page = Docs.list_docs(workspace_id, user, opts)
+    entries = Bridge.Stars.mark_starred(page.entries, user.id, "doc")
+
+    render(conn, :index, page: %{page | entries: entries})
   end
 
   def create(conn, params) do
@@ -78,7 +95,9 @@ defmodule BridgeWeb.DocController do
   end
 
   def show(conn, _params) do
-    render(conn, :show, doc: conn.assigns.doc)
+    user = conn.assigns.current_user
+    doc = Bridge.Stars.mark_starred(conn.assigns.doc, user.id, "doc")
+    render(conn, :show, doc: doc)
   end
 
   def update(conn, params) do

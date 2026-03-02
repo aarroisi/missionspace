@@ -57,14 +57,27 @@ export function DiscussionView({
   const [showJumpButton, setShowJumpButton] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Backend returns messages in desc order (newest first), reverse for chat display (oldest first)
-  const sortedMessages = [...messages].reverse();
-  const topLevelMessages = sortedMessages.filter((m) => !m.parentId);
-  const threadMessages = sortedMessages.filter((m) => m.parentId);
+  // Messages are expected in asc order (oldest first) for display
+  const topLevelMessages = messages.filter((m) => !m.parentId);
+  const threadMessages = messages.filter((m) => m.parentId);
+
+  // Scroll to bottom on initial load
+  const hasScrolledRef = useRef(false);
+  useEffect(() => {
+    if (topLevelMessages.length > 0 && !hasScrolledRef.current) {
+      hasScrolledRef.current = true;
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop =
+            scrollContainerRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [topLevelMessages.length]);
 
   // Scroll to and highlight comment if highlightCommentId is provided
   useEffect(() => {
-    if (highlightCommentId && sortedMessages.length > 0) {
+    if (highlightCommentId && messages.length > 0) {
       // Small delay to ensure the DOM is rendered
       setTimeout(() => {
         const messageElement = document.getElementById(
@@ -90,7 +103,7 @@ export function DiscussionView({
         }
       }, 300);
     }
-  }, [highlightCommentId, sortedMessages.length]);
+  }, [highlightCommentId, messages.length]);
 
   const getThreadReplies = (messageId: string) => {
     return threadMessages.filter((m) => m.parentId === messageId);

@@ -14,7 +14,6 @@ import {
   Check,
   ArrowDown,
   X,
-  MoreHorizontal,
   Star,
   Trash2,
   Quote,
@@ -24,19 +23,21 @@ import { Message } from "@/components/features/Message";
 import { DiscussionThread } from "@/components/features/DiscussionThread";
 import { CommentEditor } from "@/components/features/CommentEditor";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { useDocStore } from "@/stores/docStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUIStore } from "@/stores/uiStore";
-import { useProjectStore } from "@/stores/projectStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useAuthStore } from "@/stores/authStore";
-import { Message as MessageType, Doc } from "@/types";
-import { clsx } from "clsx";
+import { Message as MessageType } from "@/types";
 
 export function DocView() {
-  const { id: docId, projectId: projectIdParam } = useParams<{
+  const {
+    id: docId,
+    folderId: folderIdParam,
+    projectId: projectIdParam,
+  } = useParams<{
     id: string;
+    folderId?: string;
     projectId?: string;
   }>();
   const navigate = useNavigate();
@@ -48,7 +49,6 @@ export function DocView() {
     useChatStore();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { setNavigationGuard } = useUIStore();
-  const addItemToProject = useProjectStore((state) => state.addItem);
   const { success, error } = useToastStore();
   const isNewDoc = docId === "new";
 
@@ -62,6 +62,7 @@ export function DocView() {
     null,
   );
   const [editedTitle, setEditedTitle] = useState("");
+  const [editingTitle, setEditingTitle] = useState(false);
   const [editedContent, setEditedContent] = useState("");
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -73,6 +74,7 @@ export function DocView() {
   const commentEditorRef = useRef<HTMLTextAreaElement>(null);
   const editorHandleRef = useRef<RichTextEditorHandle | null>(null);
   const doc = isNewDoc ? null : docs.find((d) => d.id === docId);
+  const folderId = folderIdParam || doc?.docFolderId;
   const rawDocComments =
     docId && !isNewDoc && Array.isArray(messages[`doc:${docId}`])
       ? messages[`doc:${docId}`]
@@ -97,16 +99,29 @@ export function DocView() {
     [members],
   );
 
-  // Check if there are unsaved changes
+  // Check if there are unsaved content changes (title saves separately)
   const hasUnsavedChanges = () => {
     if (!isEditing) return false;
     if (isNewDoc) {
       return editedTitle.trim() !== "" || editedContent.trim() !== "";
     }
-    return (
-      editedTitle.trim() !== (doc?.title?.trim() || "") ||
-      editedContent !== (doc?.content || "")
-    );
+    return editedContent !== (doc?.content || "");
+  };
+
+  const handleSaveTitle = async () => {
+    if (!doc || !docId || isNewDoc) return;
+    const newTitle = editedTitle.trim();
+    if (!newTitle || newTitle === doc.title) {
+      setEditedTitle(doc.title);
+    } else {
+      try {
+        await updateDoc(docId, { title: newTitle });
+      } catch (err) {
+        error("Error updating title: " + (err as Error).message);
+        setEditedTitle(doc.title);
+      }
+    }
+    setEditingTitle(false);
   };
 
   // Set up navigation guard
@@ -190,37 +205,32 @@ export function DocView() {
 
     try {
       if (isNewDoc) {
-        // Create new document (without projectId - we use project_items now)
-        const newDoc = await createDoc(editedTitle.trim(), editedContent || "");
-
-        // If created from a project, add it to the project
-        if (projectIdParam) {
-          await addItemToProject(projectIdParam, "doc", newDoc.id);
+        if (!folderId) {
+          error("A folder is required to create a document");
+          throw new Error("No folder selected");
         }
+        const newDoc = await createDoc(
+          editedTitle.trim(),
+          editedContent || "",
+          folderId,
+        );
 
         success("Document created successfully");
-        // Navigate to the doc view (nested if from project)
-        if (projectIdParam) {
-          navigate(`/projects/${projectIdParam}/docs/${newDoc.id}`);
+        if (projectIdParam && folderIdParam) {
+          navigate(
+            `/projects/${projectIdParam}/doc-folders/${folderIdParam}/docs/${newDoc.id}`,
+          );
+        } else if (folderIdParam) {
+          navigate(`/doc-folders/${folderIdParam}/docs/${newDoc.id}`);
         } else {
           navigate(`/docs/${newDoc.id}`);
         }
       } else {
-        // Update existing document
+        // Update existing document content only (title saves separately)
         if (!docId) return;
 
-        const updates: Partial<Doc> = {};
-
-        if (editedTitle.trim() !== doc?.title) {
-          updates.title = editedTitle.trim();
-        }
-
         if (editedContent !== doc?.content) {
-          updates.content = editedContent;
-        }
-
-        if (Object.keys(updates).length > 0) {
-          await updateDoc(docId, updates);
+          await updateDoc(docId, { content: editedContent });
           success("Document saved successfully");
         }
 
@@ -265,8 +275,12 @@ export function DocView() {
 
   useEffect(() => {
     if (doc) {
-      setEditedTitle(doc.title);
-      setEditedContent(doc.content);
+      if (!editingTitle) {
+        setEditedTitle(doc.title);
+      }
+      if (!isEditing) {
+        setEditedContent(doc.content);
+      }
     }
   }, [doc]);
 
@@ -278,6 +292,14 @@ export function DocView() {
       }, 100);
     }
   }, [isNewDoc]);
+
+  // Focus and select title input when editing title
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingTitle]);
 
   // Restore thread from URL when messages are loaded
   useEffect(() => {
@@ -397,8 +419,13 @@ export function DocView() {
   };
 
   const performCancelNew = () => {
-    // Navigate back to project if we came from there, otherwise to docs
-    if (projectIdParam) {
+    if (projectIdParam && folderIdParam) {
+      navigate(
+        `/projects/${projectIdParam}/doc-folders/${folderIdParam}`,
+      );
+    } else if (folderIdParam) {
+      navigate(`/doc-folders/${folderIdParam}`);
+    } else if (projectIdParam) {
       navigate(`/projects/${projectIdParam}`);
     } else {
       navigate("/docs");
@@ -504,12 +531,19 @@ export function DocView() {
     }
   };
 
+  // Close on Escape key (must be before early return to maintain hook order)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !openThread && !isEditing) {
+        navigateToParent();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [openThread, isEditing]);
+
   if (!doc && !isNewDoc) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-dark-text-muted">Select a doc to view</p>
-      </div>
-    );
+    return null;
   }
 
   const getThreadReplies = (messageId: string) => {
@@ -534,34 +568,106 @@ export function DocView() {
   const handleDeleteDoc = async () => {
     if (!doc) return;
     await deleteDoc(doc.id);
-    // Navigate back to project if doc was inside a project, otherwise to docs list
-    if (projectIdParam) {
+    navigateToParent();
+  };
+
+  const navigateToParent = () => {
+    if (projectIdParam && folderId) {
+      navigate(`/projects/${projectIdParam}/doc-folders/${folderId}`);
+    } else if (folderId) {
+      navigate(`/doc-folders/${folderId}`);
+    } else if (projectIdParam) {
       navigate(`/projects/${projectIdParam}`);
     } else {
       navigate("/docs");
     }
   };
 
+  const handleClose = async () => {
+    if (isEditing && hasUnsavedChanges()) {
+      // Trigger existing unsaved changes guard
+      const { navigationGuard } = useUIStore.getState();
+      if (navigationGuard) {
+        const canNavigate = await navigationGuard();
+        if (!canNavigate) return;
+      }
+    }
+    navigateToParent();
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
+
   return (
     <>
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <div className="px-6 py-4 border-b border-dark-border max-w-7xl mx-auto w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={isEditing ? editedTitle : doc?.title || ""}
-                onChange={(e) => setEditedTitle(e.target.value)}
-                disabled={!isEditing}
-                className={clsx(
-                  "text-2xl font-bold text-dark-text bg-transparent border-none outline-none w-full",
-                  !isEditing && "cursor-default",
-                )}
-                placeholder="Add a title..."
-              />
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        onClick={handleBackdropClick}
+      >
+      <div
+        className="w-full max-w-[900px] min-h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] bg-dark-bg border border-dark-border rounded-lg flex flex-col overflow-hidden relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-dark-border w-full flex-shrink-0">
+          <div className={`flex justify-between ${isNewDoc ? "items-center" : "items-start"}`}>
+            <div className="flex-1 pr-4">
+              {isNewDoc ? (
+                <div>
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    className="text-xl font-semibold text-dark-text bg-transparent border-none outline-none w-full"
+                    placeholder="Add a title..."
+                  />
+                </div>
+              ) : editingTitle ? (
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveTitle();
+                      } else if (e.key === "Escape") {
+                        setEditedTitle(doc?.title || "");
+                        setEditingTitle(false);
+                      }
+                    }}
+                    className="flex-1 text-xl font-semibold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none pb-1"
+                  />
+                  <button
+                    onClick={handleSaveTitle}
+                    className="p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    title="Save title"
+                  >
+                    <Check size={18} />
+                  </button>
+                </div>
+              ) : (
+                <div className="mb-2">
+                  {doc?.key && (
+                    <span className="text-xs font-mono text-dark-text-muted block mb-1">
+                      {doc.key}
+                    </span>
+                  )}
+                  <h2
+                    onClick={() => setEditingTitle(true)}
+                    className="text-xl font-semibold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
+                    title="Click to edit"
+                  >
+                    {doc?.title || "Untitled"}
+                  </h2>
+                </div>
+              )}
               {!isNewDoc && doc && doc.createdBy && (
-                <div className="text-sm text-dark-text-muted mt-1">
+                <div className="text-sm text-dark-text-muted">
                   Added by {doc.createdBy.name} on{" "}
                   {format(new Date(doc.insertedAt), "MMM d, yyyy")}
                   {doc.updatedAt !== doc.insertedAt && (
@@ -573,41 +679,22 @@ export function DocView() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1">
               {isEditing && !isNewDoc && hasUnsavedChanges() && (
-                <>
-                  <span className="hidden lg:flex text-sm text-amber-500 items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                    Unsaved changes
-                  </span>
-                  <span
-                    className="lg:hidden w-2 h-2 min-w-[0.5rem] min-h-[0.5rem] rounded-full bg-amber-500 animate-pulse ml-2"
-                    title="Unsaved changes"
-                  ></span>
-                </>
+                <span
+                  className="w-2 h-2 min-w-[0.5rem] min-h-[0.5rem] rounded-full bg-amber-500 animate-pulse mr-1"
+                  title="Unsaved changes"
+                ></span>
               )}
               {isNewDoc ? (
                 <>
                   <button
-                    onClick={handleCancelNew}
-                    className="flex items-center gap-2 p-2 lg:px-4 lg:py-2 rounded-lg bg-dark-surface hover:bg-dark-border text-dark-text transition-colors flex-shrink-0"
-                    title="Cancel"
-                  >
-                    <X size={16} className="flex-shrink-0" />
-                    <span className="hidden lg:inline whitespace-nowrap">
-                      Cancel
-                    </span>
-                  </button>
-                  <button
                     onClick={handleSave}
                     disabled={!editedTitle.trim()}
-                    className="flex items-center gap-2 p-2 lg:px-4 lg:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    className="text-green-500 hover:text-green-400 transition-colors p-1 hover:bg-dark-surface rounded disabled:opacity-50"
                     title="Save"
                   >
-                    <Check size={16} className="flex-shrink-0" />
-                    <span className="hidden lg:inline whitespace-nowrap">
-                      Save
-                    </span>
+                    <Check size={18} strokeWidth={3} />
                   </button>
                 </>
               ) : (
@@ -616,83 +703,67 @@ export function DocView() {
                     <>
                       <button
                         onClick={handleCancelEdit}
-                        className="flex items-center gap-2 p-2 lg:px-4 lg:py-2 rounded-lg bg-dark-surface hover:bg-dark-border text-dark-text transition-colors flex-shrink-0"
-                        title="Cancel"
+                        className="text-dark-text-muted hover:text-dark-text transition-colors p-1 hover:bg-dark-surface rounded"
+                        title="Cancel editing"
                       >
-                        <X size={16} className="flex-shrink-0" />
-                        <span className="hidden lg:inline whitespace-nowrap">
-                          Cancel
-                        </span>
+                        <X size={18} />
                       </button>
                       <button
                         onClick={handleSave}
-                        disabled={!editedTitle.trim()}
-                        className="flex items-center gap-2 p-2 lg:px-4 lg:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                        className="text-green-500 hover:text-green-400 transition-colors p-1 hover:bg-dark-surface rounded"
                         title="Save"
                       >
-                        <Check size={16} className="flex-shrink-0" />
-                        <span className="hidden lg:inline whitespace-nowrap">
-                          Save
-                        </span>
+                        <Check size={18} strokeWidth={3} />
                       </button>
                     </>
                   ) : (
-                    <>
-                      <button
-                        onClick={handleEnterEditMode}
-                        className="flex items-center gap-2 p-2 lg:px-4 lg:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex-shrink-0"
-                        title="Edit"
-                      >
-                        <Edit3 size={16} className="flex-shrink-0" />
-                        <span className="hidden lg:inline whitespace-nowrap">
-                          Edit
-                        </span>
-                      </button>
-                      <Dropdown
-                        align="right"
-                        trigger={
-                          <button className="p-2 rounded transition-colors text-dark-text-muted hover:bg-dark-surface">
-                            <MoreHorizontal size={18} />
-                          </button>
-                        }
-                      >
-                        <DropdownItem onClick={handleToggleStar}>
-                          <span className="flex items-center gap-2">
-                            <Star
-                              size={16}
-                              className={
-                                doc?.starred
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : ""
-                              }
-                            />
-                            {doc?.starred ? "Unstar" : "Star"}
-                          </span>
-                        </DropdownItem>
-                        <DropdownItem
-                          variant="danger"
-                          onClick={() => setShowDeleteConfirm(true)}
-                        >
-                          <span className="flex items-center gap-2">
-                            <Trash2 size={16} />
-                            Delete Doc
-                          </span>
-                        </DropdownItem>
-                      </Dropdown>
-                    </>
+                    <button
+                      onClick={handleEnterEditMode}
+                      className="text-dark-text-muted hover:text-dark-text transition-colors p-1 hover:bg-dark-surface rounded"
+                      title="Edit content"
+                    >
+                      <Edit3 size={18} />
+                    </button>
                   )}
+                  <button
+                    onClick={handleToggleStar}
+                    className="text-dark-text-muted hover:text-yellow-400 transition-colors p-1 hover:bg-dark-surface rounded"
+                    title={doc?.starred ? "Unstar" : "Star"}
+                  >
+                    <Star
+                      size={18}
+                      className={
+                        doc?.starred
+                          ? "fill-yellow-400 text-yellow-400"
+                          : ""
+                      }
+                    />
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-dark-text-muted hover:text-red-400 transition-colors p-1 hover:bg-dark-surface rounded"
+                    title="Delete doc"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </>
               )}
+              <button
+                onClick={handleClose}
+                className="text-dark-text-muted hover:text-dark-text transition-colors p-1 hover:bg-dark-surface rounded"
+              >
+                <X size={20} />
+              </button>
             </div>
           </div>
         </div>
 
         <div
-          className="flex-1 overflow-y-auto relative"
+          className="flex-1 overflow-y-auto relative flex flex-col"
           ref={scrollContainerRef}
         >
           <div
-            className="max-w-7xl mx-auto w-full bg-dark-bg"
+            className="w-full bg-dark-bg"
           >
             {!doc?.content && !isEditing ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -718,7 +789,7 @@ export function DocView() {
                   This document is empty
                 </p>
                 <p className="text-dark-text-muted text-sm">
-                  Click Edit to start writing
+                  Open the menu and click Edit Content to start writing
                 </p>
               </div>
             ) : (
@@ -744,7 +815,7 @@ export function DocView() {
           </div>
 
           {!isEditing && (
-            <div className="px-8 py-6 border-t border-dark-border max-w-7xl mx-auto w-full">
+            <div className={`px-8 py-6 border-t border-dark-border w-full${topLevelComments.length === 0 ? " flex-1 flex flex-col justify-center" : ""}`}>
               {topLevelComments.length > 0 ? (
                 <>
                   <h3 className="text-sm font-medium text-dark-text mb-4">
@@ -805,20 +876,17 @@ export function DocView() {
           )}
         </div>
 
-        {/* Jump to bottom button */}
-        {!isEditing && showJumpToBottom && (
-          <button
-            onClick={handleJumpToBottom}
-            className="absolute right-8 p-3 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all z-10"
-            style={{ bottom: quotingMessage ? "200px" : "140px" }}
-            title="Jump to bottom"
-          >
-            <ArrowDown size={20} />
-          </button>
-        )}
-
         {!isEditing && (
-          <div className="border-t border-dark-border bg-dark-bg p-4 max-w-7xl mx-auto w-full">
+          <div className="relative border-t border-dark-border bg-dark-bg p-4 w-full">
+            {showJumpToBottom && (
+              <button
+                onClick={handleJumpToBottom}
+                className="absolute -top-12 right-4 p-2 rounded-full bg-dark-surface border border-dark-border text-dark-text-muted shadow-md hover:text-dark-text hover:bg-dark-hover transition-all z-10"
+                title="Jump to bottom"
+              >
+                <ArrowDown size={16} />
+              </button>
+            )}
             <CommentEditor
               ref={commentEditorRef}
               value={newComment}
@@ -835,6 +903,7 @@ export function DocView() {
             />
           </div>
         )}
+      </div>
       </div>
 
       {openThread && (

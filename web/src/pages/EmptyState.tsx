@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  FolderKanban,
+  Briefcase,
   Kanban,
-  FileText,
+  Folder,
   Hash,
   MessageSquare,
   Plus,
@@ -11,10 +11,12 @@ import {
 import { Category } from "@/types";
 import { useProjectStore } from "@/stores/projectStore";
 import { useBoardStore } from "@/stores/boardStore";
+import { useDocFolderStore } from "@/stores/docFolderStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useToastStore } from "@/stores/toastStore";
 import { CreateProjectModal } from "@/components/features/CreateProjectModal";
 import { CreateBoardModal } from "@/components/features/CreateBoardModal";
+import { CreateDocFolderModal } from "@/components/features/CreateDocFolderModal";
 import { CreateChannelModal } from "@/components/features/CreateChannelModal";
 
 export function EmptyState() {
@@ -24,10 +26,12 @@ export function EmptyState() {
 
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
+  const [showCreateDocFolderModal, setShowCreateDocFolderModal] = useState(false);
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
 
   const createProject = useProjectStore((state) => state.createProject);
   const createBoard = useBoardStore((state) => state.createBoard);
+  const createFolder = useDocFolderStore((state) => state.createFolder);
   const createChannel = useChatStore((state) => state.createChannel);
 
   // Determine category from URL
@@ -48,7 +52,7 @@ export function EmptyState() {
       case "projects":
         return {
           title: "Projects",
-          icon: FolderKanban,
+          icon: Briefcase,
           description: "Organize your work into projects",
           actionText: "Create Project",
           action: () => {
@@ -67,12 +71,12 @@ export function EmptyState() {
         };
       case "docs":
         return {
-          title: "Documents",
-          icon: FileText,
-          description: "Write and collaborate on documents",
-          actionText: "Create Document",
-          action: async () => {
-            navigate("/docs/new");
+          title: "Folders",
+          icon: Folder,
+          description: "Organize your documents into folders",
+          actionText: "Create Folder",
+          action: () => {
+            setShowCreateDocFolderModal(true);
           },
         };
       case "channels":
@@ -96,7 +100,7 @@ export function EmptyState() {
       default:
         return {
           title: "Welcome",
-          icon: FileText,
+          icon: Folder,
           description: "Select a category to get started",
           actionText: null,
           action: null,
@@ -155,6 +159,18 @@ export function EmptyState() {
     }
   };
 
+  const handleCreateDocFolder = async (name: string, prefix: string) => {
+    try {
+      const folder = await createFolder(name, prefix);
+      success("Folder created successfully");
+      setShowCreateDocFolderModal(false);
+      navigate(`/doc-folders/${folder.id}`);
+    } catch (err) {
+      console.error("Failed to create folder:", err);
+      error("Error: " + (err as Error).message);
+    }
+  };
+
   const handleCreateChannel = async (name: string) => {
     try {
       const channel = await createChannel(name);
@@ -198,6 +214,12 @@ export function EmptyState() {
         isOpen={showCreateBoardModal}
         onClose={() => setShowCreateBoardModal(false)}
         onSubmit={handleCreateBoard}
+      />
+
+      <CreateDocFolderModal
+        isOpen={showCreateDocFolderModal}
+        onClose={() => setShowCreateDocFolderModal(false)}
+        onSubmit={handleCreateDocFolder}
       />
 
       <CreateChannelModal

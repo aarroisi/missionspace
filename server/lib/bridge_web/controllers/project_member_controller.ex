@@ -32,13 +32,11 @@ defmodule BridgeWeb.ProjectMemberController do
     end
   end
 
-  # Guests can only be in one project
+  # Guests can only be in one project or item total
   defp validate_guest_project_limit(user_id, workspace_id) do
     case Accounts.get_workspace_user(user_id, workspace_id) do
       {:ok, %{role: "guest"}} ->
-        existing_projects = Projects.get_user_project_ids(user_id)
-
-        if Enum.empty?(existing_projects) do
+        if Projects.guest_membership_count(user_id) == 0 do
           :ok
         else
           {:error, :guest_project_limit}

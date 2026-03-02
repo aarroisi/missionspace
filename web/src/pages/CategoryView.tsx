@@ -1,13 +1,13 @@
 import { useLocation } from "react-router-dom";
 import { useProjectStore } from "@/stores/projectStore";
 import { useBoardStore } from "@/stores/boardStore";
-import { useDocStore } from "@/stores/docStore";
+import { useDocFolderStore } from "@/stores/docFolderStore";
 import { useChatStore } from "@/stores/chatStore";
 import { Category } from "@/types";
 import {
-  FolderKanban,
+  Briefcase,
   Kanban,
-  FileText,
+  Folder,
   Hash,
   MessageSquare,
 } from "lucide-react";
@@ -28,11 +28,11 @@ export function CategoryView() {
   const boardsLoading = useBoardStore((state) => state.isLoading);
   const fetchBoards = useBoardStore((state) => state.fetchBoards);
 
-  const rawDocs = useDocStore((state) => state.docs);
-  const docs = Array.isArray(rawDocs) ? rawDocs : [];
-  const docsHasMore = useDocStore((state) => state.hasMore);
-  const docsLoading = useDocStore((state) => state.isLoading);
-  const fetchDocs = useDocStore((state) => state.fetchDocs);
+  const rawDocFolders = useDocFolderStore((state) => state.folders);
+  const docFolders = Array.isArray(rawDocFolders) ? rawDocFolders : [];
+  const docFoldersHasMore = useDocFolderStore((state) => state.hasMore);
+  const docFoldersLoading = useDocFolderStore((state) => state.isLoading);
+  const fetchDocFolders = useDocFolderStore((state) => state.fetchFolders);
 
   const rawChannels = useChatStore((state) => state.channels);
   const channels = Array.isArray(rawChannels) ? rawChannels : [];
@@ -55,7 +55,8 @@ export function CategoryView() {
     const path = location.pathname;
     if (path.startsWith("/projects")) return "projects";
     if (path.startsWith("/boards")) return "boards";
-    if (path.startsWith("/docs")) return "docs";
+    if (path.startsWith("/doc-folders") || path.startsWith("/docs"))
+      return "docs";
     if (path.startsWith("/channels")) return "channels";
     if (path.startsWith("/dms")) return "dms";
     return "home";
@@ -68,7 +69,7 @@ export function CategoryView() {
       case "projects":
         return {
           title: "Projects",
-          icon: FolderKanban,
+          icon: Briefcase,
           items: projects,
           hasMore: projectsHasMore,
           isLoading: projectsLoading,
@@ -87,13 +88,14 @@ export function CategoryView() {
         };
       case "docs":
         return {
-          title: "Documents",
-          icon: FileText,
-          items: docs,
-          hasMore: docsHasMore,
-          isLoading: docsLoading,
-          onLoadMore: () => fetchDocs(true),
-          emptyMessage: "No documents yet. Create one to start writing!",
+          title: "Folders",
+          icon: Folder,
+          items: docFolders,
+          hasMore: docFoldersHasMore,
+          isLoading: docFoldersLoading,
+          onLoadMore: () => fetchDocFolders(true),
+          emptyMessage:
+            "No folders yet. Create one to organize your documents!",
         };
       case "channels":
         return {
@@ -118,7 +120,7 @@ export function CategoryView() {
       default:
         return {
           title: "Unknown",
-          icon: FileText,
+          icon: Folder,
           items: [],
           hasMore: false,
           isLoading: false,

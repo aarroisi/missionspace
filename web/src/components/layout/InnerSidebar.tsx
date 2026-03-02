@@ -4,8 +4,10 @@ import {
   ChevronDown,
   ChevronRight,
   Kanban,
-  FileText,
+  Folder,
   Hash,
+  Briefcase,
+  MessageSquare,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -13,13 +15,15 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useProjectStore } from "@/stores/projectStore";
 import { useBoardStore } from "@/stores/boardStore";
-import { useDocStore } from "@/stores/docStore";
+import { useDocFolderStore } from "@/stores/docFolderStore";
 import { useChatStore } from "@/stores/chatStore";
+import { useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { Category } from "@/types";
 import { CreateProjectModal } from "@/components/features/CreateProjectModal";
 import { CreateBoardModal } from "@/components/features/CreateBoardModal";
+import { CreateDocFolderModal } from "@/components/features/CreateDocFolderModal";
 import { CreateChannelModal } from "@/components/features/CreateChannelModal";
 
 export function InnerSidebar() {
@@ -32,13 +36,20 @@ export function InnerSidebar() {
   const { success, error } = useToastStore();
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
+  const [showCreateDocFolderModal, setShowCreateDocFolderModal] =
+    useState(false);
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [createBoardForProjectId, setCreateBoardForProjectId] = useState<
     string | null
   >(null);
+  const [createDocFolderForProjectId, setCreateDocFolderForProjectId] =
+    useState<string | null>(null);
   const [addItemDropdownProjectId, setAddItemDropdownProjectId] = useState<
     string | null
   >(null);
+  const [showNewDM, setShowNewDM] = useState(false);
+  const [dmSearch, setDmSearch] = useState("");
+  const dmSearchRef = useRef<HTMLInputElement>(null);
   const addItemDropdownRef = useRef<HTMLDivElement>(null);
 
   const projects = useProjectStore((state) => state.projects) || [];
@@ -64,18 +75,18 @@ export function InnerSidebar() {
   // Get all item IDs that belong to projects (for determining category)
   const projectItemIds = useMemo(() => {
     const boardIds = new Set<string>();
-    const docIds = new Set<string>();
+    const docFolderIds = new Set<string>();
     const channelIds = new Set<string>();
 
     projects.forEach((p) => {
       (p.items || []).forEach((item) => {
         if (item.itemType === "board") boardIds.add(item.itemId);
-        if (item.itemType === "doc") docIds.add(item.itemId);
+        if (item.itemType === "doc_folder") docFolderIds.add(item.itemId);
         if (item.itemType === "channel") channelIds.add(item.itemId);
       });
     });
 
-    return { boardIds, docIds, channelIds };
+    return { boardIds, docFolderIds, channelIds };
   }, [projects]);
 
   // Determine active category from URL
@@ -86,7 +97,8 @@ export function InnerSidebar() {
     // All /projects/* routes (including nested /projects/:id/docs/:docId) are projects
     if (path.startsWith("/projects")) return "projects";
     if (path.startsWith("/boards")) return "boards";
-    if (path.startsWith("/docs")) return "docs";
+    if (path.startsWith("/doc-folders") || path.startsWith("/docs"))
+      return "docs";
     if (path.startsWith("/channels")) return "channels";
     if (path.startsWith("/dms")) return "dms";
     return "home";
@@ -202,15 +214,19 @@ export function InnerSidebar() {
   const addItemToProject = useProjectStore((state) => state.addItem);
   const boards = useBoardStore((state) => state.boards) || [];
   const createBoard = useBoardStore((state) => state.createBoard);
-  const docs = useDocStore((state) => state.docs) || [];
+  const docFolders = useDocFolderStore((state) => state.folders) || [];
+  const createDocFolder = useDocFolderStore((state) => state.createFolder);
   const channels = useChatStore((state) => state.channels) || [];
   const directMessages = useChatStore((state) => state.directMessages) || [];
   const createChannel = useChatStore((state) => state.createChannel);
+  const createDirectMessage = useChatStore((state) => state.createDirectMessage);
+  const currentUser = useAuthStore((state) => state.user);
+  const workspaceMembers = useAuthStore((state) => state.members) || [];
 
   // Handler to add item to a specific project
   const handleAddItemToProject = async (
     projectId: string,
-    itemType: "board" | "doc" | "channel",
+    itemType: "board" | "doc_folder" | "channel",
   ) => {
     setAddItemDropdownProjectId(null);
 
@@ -221,9 +237,9 @@ export function InnerSidebar() {
     }
 
     try {
-      if (itemType === "doc") {
-        // Navigate to new doc page
-        navigate(`/projects/${projectId}/docs/new`);
+      if (itemType === "doc_folder") {
+        setCreateDocFolderForProjectId(projectId);
+        setShowCreateDocFolderModal(true);
       } else if (itemType === "board") {
         // Show modal to get board name
         setCreateBoardForProjectId(projectId);
@@ -244,7 +260,7 @@ export function InnerSidebar() {
   // Ensure all are arrays
   const safeProjects = Array.isArray(projects) ? projects : [];
   const safeBoards = Array.isArray(boards) ? boards : [];
-  const safeDocs = Array.isArray(docs) ? docs : [];
+  const safeDocFolders = Array.isArray(docFolders) ? docFolders : [];
   const safeChannels = Array.isArray(channels) ? channels : [];
   const safeDirectMessages = Array.isArray(directMessages)
     ? directMessages
@@ -254,8 +270,8 @@ export function InnerSidebar() {
   const workspaceBoards = safeBoards.filter(
     (b) => !projectItemIds.boardIds.has(b.id),
   );
-  const workspaceDocs = safeDocs.filter(
-    (d) => !projectItemIds.docIds.has(d.id),
+  const workspaceDocFolders = safeDocFolders.filter(
+    (f) => !projectItemIds.docFolderIds.has(f.id),
   );
   const workspaceChannels = safeChannels.filter(
     (c) => !projectItemIds.channelIds.has(c.id),
@@ -269,12 +285,12 @@ export function InnerSidebar() {
       .map((i) => i.itemId);
     return safeBoards.filter((b) => boardIds.includes(b.id));
   };
-  const getProjectDocs = (projectId: string) => {
+  const getProjectDocFolders = (projectId: string) => {
     const project = safeProjects.find((p) => p.id === projectId);
-    const docIds = (project?.items || [])
-      .filter((i) => i.itemType === "doc")
+    const folderIds = (project?.items || [])
+      .filter((i) => i.itemType === "doc_folder")
       .map((i) => i.itemId);
-    return safeDocs.filter((d) => docIds.includes(d.id));
+    return safeDocFolders.filter((f) => folderIds.includes(f.id));
   };
   const getProjectChannels = (projectId: string) => {
     const project = safeProjects.find((p) => p.id === projectId);
@@ -306,9 +322,9 @@ export function InnerSidebar() {
           setShowCreateBoardModal(true);
           return;
         case "docs":
-          navigate("/docs/new");
-          setActiveItem({ type: "docs", id: "new" });
-          break;
+          setCreateDocFolderForProjectId(null);
+          setShowCreateDocFolderModal(true);
+          return;
         case "channels":
           setShowCreateChannelModal(true);
           return;
@@ -360,6 +376,31 @@ export function InnerSidebar() {
     }
   };
 
+  const handleCreateDocFolder = async (name: string, prefix: string) => {
+    try {
+      const folder = await createDocFolder(name, prefix);
+      if (createDocFolderForProjectId) {
+        await addItemToProject(
+          createDocFolderForProjectId,
+          "doc_folder",
+          folder.id,
+        );
+        success("Folder created successfully");
+        setShowCreateDocFolderModal(false);
+        navigate(
+          `/projects/${createDocFolderForProjectId}/doc-folders/${folder.id}`,
+        );
+      } else {
+        success("Folder created successfully");
+        setShowCreateDocFolderModal(false);
+        await navigateToItem("doc-folders", folder.id);
+      }
+    } catch (err) {
+      console.error("Failed to create folder:", err);
+      error("Error: " + (err as Error).message);
+    }
+  };
+
   const handleCreateChannel = async (name: string) => {
     try {
       const channel = await createChannel(name);
@@ -372,9 +413,20 @@ export function InnerSidebar() {
     }
   };
 
-  const getItemName = (item: any, type: string) => {
-    if (type === "docs") return item.title;
-    return item.name;
+  const handleStartDM = async (userId: string) => {
+    try {
+      const dm = await createDirectMessage(userId);
+      setShowNewDM(false);
+      setDmSearch("");
+      await navigateToItem("dms", dm.id);
+    } catch (err) {
+      console.error("Failed to create DM:", err);
+      error("Error: " + (err as Error).message);
+    }
+  };
+
+  const getItemName = (item: any, _type: string) => {
+    return item.name || item.title;
   };
 
   const renderStarred = (items: any[], type: string) => {
@@ -419,12 +471,16 @@ export function InnerSidebar() {
 
   const getItemIcon = (type: string) => {
     switch (type) {
+      case "projects":
+        return <Briefcase size={16} />;
       case "boards":
         return <Kanban size={16} />;
-      case "docs":
-        return <FileText size={16} />;
+      case "doc-folders":
+        return <Folder size={16} />;
       case "channels":
         return <Hash size={16} />;
+      case "dms":
+        return <MessageSquare size={16} />;
       default:
         return null;
     }
@@ -457,33 +513,33 @@ export function InnerSidebar() {
               )}
               {safeProjects.map((project) => {
                 const projectBoards = getProjectBoards(project.id);
-                const projectDocs = getProjectDocs(project.id);
+                const projectDocFolders = getProjectDocFolders(project.id);
                 const projectChannels = getProjectChannels(project.id);
                 const hasItems =
                   projectBoards.length > 0 ||
-                  projectDocs.length > 0 ||
+                  projectDocFolders.length > 0 ||
                   projectChannels.length > 0;
                 const isProjectActive = activeProjectId === project.id;
 
                 return (
                   <div key={project.id} className="group">
                     <div className="flex items-center pr-3">
-                      <span className="p-1">
-                        {isProjectActive ? (
-                          <ChevronDown size={14} />
-                        ) : (
-                          <ChevronRight size={14} />
-                        )}
-                      </span>
                       <button
                         onClick={() => navigateToItem("projects", project.id)}
                         className={clsx(
-                          "flex-1 px-2 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors rounded",
+                          "flex-1 px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors rounded",
                           activeItemId === project.id &&
                             activeItemType === "projects" &&
                             "bg-dark-surface text-blue-400",
                         )}
                       >
+                        <span className="flex-shrink-0">
+                          {isProjectActive ? (
+                            <ChevronDown size={14} />
+                          ) : (
+                            <ChevronRight size={14} />
+                          )}
+                        </span>
                         <span className="truncate flex-1">{project.name}</span>
                       </button>
                       <div className="relative">
@@ -522,12 +578,15 @@ export function InnerSidebar() {
                             </button>
                             <button
                               onClick={() =>
-                                handleAddItemToProject(project.id, "doc")
+                                handleAddItemToProject(
+                                  project.id,
+                                  "doc_folder",
+                                )
                               }
                               className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-hover text-dark-text"
                             >
-                              <FileText size={14} />
-                              New Doc
+                              <Folder size={14} />
+                              New Folder
                             </button>
                             <button
                               onClick={() =>
@@ -543,7 +602,7 @@ export function InnerSidebar() {
                       </div>
                     </div>
                     {isProjectActive && (
-                      <div className="ml-6 border-l border-dark-border">
+                      <div className="ml-[19px] border-l border-dark-border">
                         {!hasItems && (
                           <p className="pl-3 py-1.5 text-xs text-dark-text-muted">
                             No items yet
@@ -569,13 +628,17 @@ export function InnerSidebar() {
                             </button>
                           );
                         })}
-                        {projectDocs.map((doc) => {
-                          const isActive = activeItemId === doc.id;
+                        {projectDocFolders.map((folder) => {
+                          const isActive = activeItemId === folder.id;
                           return (
                             <button
-                              key={doc.id}
+                              key={folder.id}
                               onClick={() =>
-                                navigateToItem("docs", doc.id, project.id)
+                                navigateToItem(
+                                  "doc-folders",
+                                  folder.id,
+                                  project.id,
+                                )
                               }
                               className={clsx(
                                 "w-full pl-3 pr-2 py-1.5 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors",
@@ -584,8 +647,8 @@ export function InnerSidebar() {
                                   : "text-dark-text-muted",
                               )}
                             >
-                              <FileText size={14} className="flex-shrink-0" />
-                              <span className="truncate">{doc.title}</span>
+                              <Folder size={14} className="flex-shrink-0" />
+                              <span className="truncate">{folder.name}</span>
                             </button>
                           );
                         })}
@@ -662,9 +725,9 @@ export function InnerSidebar() {
       case "docs":
         return (
           <div>
-            {renderStarred(workspaceDocs, "docs")}
+            {renderStarred(workspaceDocFolders, "doc-folders")}
             <div className="px-3 py-1.5 text-xs font-semibold text-dark-text-muted uppercase tracking-wider flex items-center justify-between">
-              All Docs
+              All Folders
               <button
                 onClick={handleCreateItem}
                 className="hover:text-dark-text"
@@ -673,22 +736,23 @@ export function InnerSidebar() {
               </button>
             </div>
             <div className="mt-1">
-              {workspaceDocs.length === 0 && (
+              {workspaceDocFolders.length === 0 && (
                 <p className="px-3 py-2 text-sm text-dark-text-muted">
-                  No docs yet
+                  No folders yet
                 </p>
               )}
-              {workspaceDocs.map((doc) => (
+              {workspaceDocFolders.map((folder) => (
                 <button
-                  key={doc.id}
-                  onClick={() => navigateToItem("docs", doc.id)}
+                  key={folder.id}
+                  onClick={() => navigateToItem("doc-folders", folder.id)}
                   className={clsx(
                     "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors",
-                    activeItemId === doc.id && "bg-dark-surface text-blue-400",
+                    activeItemId === folder.id &&
+                      "bg-dark-surface text-blue-400",
                   )}
                 >
-                  <FileText size={16} />
-                  <span className="truncate">{doc.title}</span>
+                  <Folder size={16} />
+                  <span className="truncate">{folder.name}</span>
                 </button>
               ))}
             </div>
@@ -732,42 +796,76 @@ export function InnerSidebar() {
           </div>
         );
 
-      case "dms":
+      case "dms": {
+        const existingDmUserIds = new Set(
+          safeDirectMessages.map((dm) => dm.userId),
+        );
+        const dmCandidates = workspaceMembers
+          .filter(
+            (m) => m.id !== currentUser?.id && !existingDmUserIds.has(m.id),
+          )
+          .filter((m) => {
+            if (!dmSearch.trim()) return true;
+            const q = dmSearch.toLowerCase();
+            return (
+              m.name.toLowerCase().includes(q) ||
+              m.email.toLowerCase().includes(q)
+            );
+          });
+
+        // Build a combined list: existing DMs first, then remaining members
+        const dmMembers = safeDirectMessages.map((dm) => ({
+          id: dm.userId,
+          name: dm.name,
+          online: dm.online,
+          dmId: dm.id,
+          starred: dm.starred,
+        }));
+        const dmUserIds = new Set(dmMembers.map((m) => m.id));
+        const otherMembers = workspaceMembers
+          .filter(
+            (m) => m.id !== currentUser?.id && !dmUserIds.has(m.id),
+          )
+          .map((m) => ({
+            id: m.id,
+            name: m.name,
+            online: m.online,
+            dmId: null as string | null,
+            starred: false,
+          }));
+        const allDmMembers = [...dmMembers, ...otherMembers];
+
         return (
           <div>
             {renderStarred(safeDirectMessages, "dms")}
-            <div className="px-3 py-1.5 text-xs font-semibold text-dark-text-muted uppercase tracking-wider flex items-center justify-between">
+            <div className="px-3 py-1.5 text-xs font-semibold text-dark-text-muted uppercase tracking-wider">
               Direct Messages
-              <button
-                onClick={handleCreateItem}
-                className="hover:text-dark-text"
-                disabled
-              >
-                <Plus size={14} />
-              </button>
             </div>
             <div className="mt-1">
-              {safeDirectMessages.length === 0 && (
-                <p className="px-3 py-2 text-sm text-dark-text-muted">
-                  No conversations yet
-                </p>
-              )}
-              {safeDirectMessages.map((dm) => (
+              {allDmMembers.map((member) => (
                 <button
-                  key={dm.id}
-                  onClick={() => navigateToItem("dms", dm.id)}
+                  key={member.id}
+                  onClick={() => {
+                    if (member.dmId) {
+                      navigateToItem("dms", member.dmId);
+                    } else {
+                      handleStartDM(member.id);
+                    }
+                  }}
                   className={clsx(
                     "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors",
-                    activeItemId === dm.id && "bg-dark-surface text-blue-400",
+                    member.dmId && activeItemId === member.dmId &&
+                      "bg-dark-surface text-blue-400",
                   )}
                 >
-                  <Avatar name={dm.name} size="xs" online={dm.online} />
-                  <span className="truncate">{dm.name}</span>
+                  <Avatar name={member.name} size="xs" online={member.online} />
+                  <span className="truncate">{member.name}</span>
                 </button>
               ))}
             </div>
           </div>
         );
+      }
 
       default:
         return null;
@@ -800,6 +898,14 @@ export function InnerSidebar() {
           setCreateBoardForProjectId(null);
         }}
         onSubmit={handleCreateBoard}
+      />
+      <CreateDocFolderModal
+        isOpen={showCreateDocFolderModal}
+        onClose={() => {
+          setShowCreateDocFolderModal(false);
+          setCreateDocFolderForProjectId(null);
+        }}
+        onSubmit={handleCreateDocFolder}
       />
       <CreateChannelModal
         isOpen={showCreateChannelModal}

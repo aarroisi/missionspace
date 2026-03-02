@@ -42,6 +42,11 @@ defmodule BridgeWeb.Router do
       only: [:index, :create, :delete]
     )
 
+    # Item member management
+    get("/item-members/:item_type/:item_id", ItemMemberController, :index)
+    post("/item-members/:item_type/:item_id", ItemMemberController, :create)
+    delete("/item-members/:item_type/:item_id/:user_id", ItemMemberController, :delete)
+
     # Resource routes (authentication required)
     resources("/projects", ProjectController, except: [:new, :edit])
     get("/boards/suggest-prefix", ListController, :suggest_prefix)
@@ -54,10 +59,19 @@ defmodule BridgeWeb.Router do
     delete("/statuses/:id", ListStatusController, :delete)
     resources("/tasks", TaskController, except: [:new, :edit])
     put("/tasks/:id/reorder", TaskController, :reorder)
+    get("/doc-folders/suggest-prefix", DocFolderController, :suggest_prefix)
+    get("/doc-folders/check-prefix", DocFolderController, :check_prefix)
+    resources("/doc-folders", DocFolderController, except: [:new, :edit])
     resources("/docs", DocController, except: [:new, :edit])
     resources("/channels", ChannelController, except: [:new, :edit])
     resources("/direct_messages", DirectMessageController, except: [:new, :edit])
     resources("/messages", MessageController, except: [:new, :edit])
+
+    # Star toggle (per-user)
+    post("/stars/toggle", StarController, :toggle)
+
+    # Search
+    get("/search", SearchController, :index)
 
     # Notification routes
     get("/notifications", NotificationController, :index)

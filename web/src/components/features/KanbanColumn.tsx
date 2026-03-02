@@ -3,7 +3,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ChevronsLeftRight, ChevronsRightLeft, Plus } from "lucide-react";
+import { ChevronsRightLeft, Plus } from "lucide-react";
 import { SortableTaskCard } from "./SortableTaskCard";
 import { Task } from "@/types";
 import { clsx } from "clsx";
@@ -57,7 +57,6 @@ export function KanbanColumn({
         onClick={onToggleCollapse}
         data-testid={`column-${title.toLowerCase()}`}
       >
-        <ChevronsLeftRight size={16} className="text-dark-text-muted mb-3" />
         <div className="text-dark-text-muted font-medium text-lg mb-2">
           ({tasks.length})
         </div>

@@ -114,9 +114,43 @@ defmodule Bridge.Accounts do
 
   """
   def update_user(%User{} = user, attrs) do
-    user
-    |> User.changeset(attrs)
-    |> Repo.update()
+    changeset = User.changeset(user, attrs)
+    new_role = Ecto.Changeset.get_change(changeset, :role)
+
+    if user.role == "owner" and new_role in ["member", "guest"] do
+      # Demotion: force all private items to shared
+      Repo.transaction(fn ->
+        case Repo.update(changeset) do
+          {:ok, updated_user} ->
+            force_private_items_to_shared(user.id)
+            updated_user
+
+          {:error, changeset} ->
+            Repo.rollback(changeset)
+        end
+      end)
+    else
+      Repo.update(changeset)
+    end
+  end
+
+  defp force_private_items_to_shared(user_id) do
+    import Ecto.Query
+
+    from(l in Bridge.Lists.List,
+      where: l.created_by_id == ^user_id and l.visibility == "private"
+    )
+    |> Repo.update_all(set: [visibility: "shared"])
+
+    from(f in Bridge.Docs.DocFolder,
+      where: f.created_by_id == ^user_id and f.visibility == "private"
+    )
+    |> Repo.update_all(set: [visibility: "shared"])
+
+    from(c in Bridge.Chat.Channel,
+      where: c.created_by_id == ^user_id and c.visibility == "private"
+    )
+    |> Repo.update_all(set: [visibility: "shared"])
   end
 
   @doc """
@@ -139,6 +173,9 @@ defmodule Bridge.Accounts do
     Repo.transaction(fn ->
       # Remove project memberships
       Projects.remove_all_memberships_for_user(user.id)
+
+      # Remove item memberships
+      Projects.remove_all_item_memberships_for_user(user.id)
 
       # Remove notifications (both as recipient and actor)
       Notifications.delete_all_for_user(user.id)

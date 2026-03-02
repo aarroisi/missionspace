@@ -1,6 +1,34 @@
 import { create } from "zustand";
 import { Channel, DirectMessage, Message, PaginatedResponse } from "@/types";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
+
+interface RawDM {
+  id: string;
+  starred: boolean;
+  user1Id: string;
+  user2Id: string;
+  user1: { id: string; name: string; email: string; avatar: string } | null;
+  user2: { id: string; name: string; email: string; avatar: string } | null;
+  insertedAt: string;
+  updatedAt: string;
+}
+
+function transformDM(raw: RawDM): DirectMessage {
+  const currentUser = useAuthStore.getState().user;
+  const otherUser =
+    raw.user1Id === currentUser?.id ? raw.user2 : raw.user1;
+  return {
+    id: raw.id,
+    name: otherUser?.name || "Unknown",
+    userId: otherUser?.id || "",
+    avatar: otherUser?.avatar || "",
+    online: false,
+    starred: raw.starred,
+    insertedAt: raw.insertedAt,
+    updatedAt: raw.updatedAt,
+  };
+}
 
 interface ChatState {
   channels: Channel[];
@@ -118,7 +146,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   toggleChannelStar: async (id: string) => {
     const channel = get().channels.find((c) => c.id === id);
     if (channel) {
-      await get().updateChannel(id, { starred: !channel.starred });
+      set((state) => ({
+        channels: state.channels.map((c) =>
+          c.id === id ? { ...c, starred: !c.starred } : c,
+        ),
+      }));
+      await api.post("/stars/toggle", { type: "channel", id });
     }
   },
 
@@ -135,15 +168,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         params.after = dmsAfterCursor;
       }
 
-      const response = await api.get<PaginatedResponse<DirectMessage>>(
+      const response = await api.get<PaginatedResponse<RawDM>>(
         "/direct_messages",
         params,
       );
 
+      const transformed = response.data.map(transformDM);
+
       set((state) => ({
         directMessages: loadMore
-          ? [...state.directMessages, ...response.data]
-          : response.data,
+          ? [...state.directMessages, ...transformed]
+          : transformed,
         dmsAfterCursor: response.metadata.after,
         hasMoreDMs: response.metadata.after !== null,
         isLoading: false,
@@ -155,22 +190,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   createDirectMessage: async (userId: string) => {
-    const dm = await api.post<DirectMessage>("/direct_messages", { userId });
-    set((state) => ({ directMessages: [...state.directMessages, dm] }));
+    const raw = await api.post<RawDM>("/direct_messages", { user2Id: userId });
+    const dm = transformDM(raw);
+    set((state) => {
+      // Avoid duplicates if DM already exists (idempotent create)
+      const exists = state.directMessages.some((d) => d.id === dm.id);
+      return {
+        directMessages: exists ? state.directMessages : [...state.directMessages, dm],
+      };
+    });
     return dm;
   },
 
   toggleDMStar: async (id: string) => {
     const dm = get().directMessages.find((d) => d.id === id);
     if (dm) {
-      const updated = await api.patch<DirectMessage>(`/direct_messages/${id}`, {
-        starred: !dm.starred,
-      });
       set((state) => ({
         directMessages: state.directMessages.map((d) =>
-          d.id === id ? updated : d,
+          d.id === id ? { ...d, starred: !d.starred } : d,
         ),
       }));
+      await api.post("/stars/toggle", { type: "direct_message", id });
     }
   },
 

@@ -32,6 +32,7 @@ defmodule BridgeWeb.TaskJSON do
       key: get_task_key(task),
       position: task.position,
       is_completed: task.is_completed,
+      starred: task.starred,
       notes: task.notes,
       due_on: task.due_on,
       completed_at: task.completed_at,

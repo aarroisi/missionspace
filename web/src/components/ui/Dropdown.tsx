@@ -72,6 +72,7 @@ export function Dropdown({
             align === "left" ? "left-0" : "right-0",
             position === "top" ? "bottom-full mb-2" : "top-full mt-2",
           )}
+          onClick={() => setIsOpen(false)}
         >
           {children}
         </div>

@@ -5,11 +5,13 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { MoreHorizontal, Star, Trash2, Pencil, Check } from "lucide-react";
+import { MoreHorizontal, Star, Trash2, Pencil, Check, Users } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DiscussionView } from "@/components/features/DiscussionView";
 import { DiscussionThread } from "@/components/features/DiscussionThread";
+import { ManageMembersModal } from "@/components/features/ManageMembersModal";
+import { Avatar } from "@/components/ui/Avatar";
 import { useChatStore } from "@/stores/chatStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -38,6 +40,7 @@ export function ChatView() {
   } = useChatStore();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -206,13 +209,20 @@ export function ChatView() {
                 <Check size={18} />
               </button>
             </div>
+          ) : entityType === "dm" ? (
+            <div className="flex items-center gap-3">
+              <Avatar name={item.name} size="sm" online={"online" in item && item.online} />
+              <h1 className="text-2xl font-bold text-dark-text">
+                {item.name}
+              </h1>
+            </div>
           ) : (
             <h1
               className="text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
-              onClick={entityType === "channel" ? handleStartRename : undefined}
-              title={entityType === "channel" ? "Click to rename" : undefined}
+              onClick={handleStartRename}
+              title="Click to rename"
             >
-              {entityType === "channel" ? "#" : ""} {item.name}
+              # {item.name}
             </h1>
           )}
           {entityType === "channel" && !isRenaming && (
@@ -224,6 +234,14 @@ export function ChatView() {
                 </button>
               }
             >
+              {!projectId && (
+                <DropdownItem onClick={() => setShowMembersModal(true)}>
+                  <span className="flex items-center gap-2">
+                    <Users size={16} />
+                    Members
+                  </span>
+                </DropdownItem>
+              )}
               <DropdownItem onClick={handleStartRename}>
                 <span className="flex items-center gap-2">
                   <Pencil size={16} />
@@ -306,6 +324,16 @@ export function ChatView() {
         onConfirm={handleDeleteChannel}
         onCancel={() => setShowDeleteConfirm(false)}
       />
+
+      {/* Members Modal (standalone channels only, not project items) */}
+      {entityType === "channel" && !projectId && entityId && (
+        <ManageMembersModal
+          itemKind="channel"
+          itemId={entityId}
+          isOpen={showMembersModal}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { Calendar, CheckSquare, MessageSquare, StickyNote } from "lucide-react";
+import { Calendar, CheckSquare, MessageSquare, StickyNote, Star } from "lucide-react";
 import { format } from "date-fns";
 import { Avatar } from "@/components/ui/Avatar";
 import { Task } from "@/types";
@@ -26,11 +26,16 @@ export function TaskCard({
         isDragging && "shadow-lg ring-2 ring-blue-500 opacity-90",
       )}
     >
-      {task.key && (
-        <span className="text-xs font-mono text-dark-text-muted mb-1 block">
-          {task.key}
-        </span>
-      )}
+      <div className="flex items-center justify-between mb-1">
+        {task.key && (
+          <span className="text-xs font-mono text-dark-text-muted">
+            {task.key}
+          </span>
+        )}
+        {task.starred && (
+          <Star size={12} className="fill-yellow-400 text-yellow-400 ml-auto" />
+        )}
+      </div>
       <h4 className="font-medium text-dark-text text-sm mb-2">{task.title}</h4>
 
       <div className="flex items-center gap-3 text-xs text-dark-text-muted flex-wrap">

@@ -21,29 +21,49 @@ defmodule Bridge.Chat do
       [%Channel{}, ...]
 
   """
-  def list_channels(workspace_id, _user, opts \\ []) do
+  def list_channels(workspace_id, user, opts \\ []) do
     Channel
     |> where([c], c.workspace_id == ^workspace_id)
+    |> filter_accessible_channels(user)
     |> order_by([c], desc: c.id)
     |> preload([:created_by])
     |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
   end
 
-  @doc """
-  Returns the list of starred channels for a workspace.
+  def list_starred_channels(workspace_id, user, opts \\ []) do
+    starred_ids = Bridge.Stars.starred_ids(user.id, "channel")
 
-  ## Examples
+    if MapSet.size(starred_ids) == 0 do
+      %{entries: [], metadata: %{after: nil, before: nil, limit: 50}}
+    else
+      ids = MapSet.to_list(starred_ids)
 
-      iex> list_starred_channels(workspace_id, user)
-      [%Channel{}, ...]
+      Channel
+      |> where([c], c.id in ^ids and c.workspace_id == ^workspace_id)
+      |> filter_accessible_channels(user)
+      |> order_by([c], desc: c.id)
+      |> preload([:created_by])
+      |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
+    end
+  end
 
-  """
-  def list_starred_channels(workspace_id, _user, opts \\ []) do
-    Channel
-    |> where([c], c.starred == true and c.workspace_id == ^workspace_id)
-    |> order_by([c], desc: c.id)
-    |> preload([:created_by])
-    |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
+  defp filter_accessible_channels(query, %{role: "owner", id: user_id}) do
+    where(query, [c], c.visibility == "shared" or c.created_by_id == ^user_id)
+  end
+
+  defp filter_accessible_channels(query, %{id: user_id}) do
+    project_channel_ids =
+      Bridge.Projects.get_project_item_ids_for_user_projects(user_id, "channel")
+
+    item_member_ids = Bridge.Projects.get_user_item_member_ids(user_id, "channel")
+
+    where(
+      query,
+      [c],
+      c.id in ^project_channel_ids or
+        c.created_by_id == ^user_id or
+        (c.visibility == "shared" and c.id in ^item_member_ids)
+    )
   end
 
   @doc """
@@ -135,18 +155,6 @@ defmodule Bridge.Chat do
     Channel.changeset(channel, attrs)
   end
 
-  @doc """
-  Toggles the starred status of a channel.
-
-  ## Examples
-
-      iex> toggle_channel_starred(channel)
-      {:ok, %Channel{}}
-
-  """
-  def toggle_channel_starred(%Channel{} = channel) do
-    update_channel(channel, %{starred: !channel.starred})
-  end
 
   # ============================================================================
   # DirectMessage functions
@@ -195,12 +203,20 @@ defmodule Bridge.Chat do
       [%DirectMessage{}, ...]
 
   """
-  def list_starred_direct_messages(workspace_id, opts \\ []) do
-    DirectMessage
-    |> where([dm], dm.starred == true and dm.workspace_id == ^workspace_id)
-    |> order_by([dm], desc: dm.id)
-    |> preload([:user1, :user2])
-    |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
+  def list_starred_direct_messages(workspace_id, user_id, opts \\ []) do
+    starred_ids = Bridge.Stars.starred_ids(user_id, "direct_message")
+
+    if MapSet.size(starred_ids) == 0 do
+      %{entries: [], metadata: %{after: nil, before: nil, limit: 50}}
+    else
+      ids = MapSet.to_list(starred_ids)
+
+      DirectMessage
+      |> where([dm], dm.id in ^ids and dm.workspace_id == ^workspace_id)
+      |> order_by([dm], desc: dm.id)
+      |> preload([:user1, :user2])
+      |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
+    end
   end
 
   @doc """
@@ -279,10 +295,17 @@ defmodule Bridge.Chat do
       {:ok, %DirectMessage{}}
 
   """
-  def create_or_get_direct_message(user1_id, user2_id) do
+  def create_or_get_direct_message(user1_id, user2_id, workspace_id) do
     case get_direct_message_between(user1_id, user2_id) do
-      nil -> create_direct_message(%{user1_id: user1_id, user2_id: user2_id})
-      dm -> {:ok, dm}
+      nil ->
+        create_direct_message(%{
+          user1_id: user1_id,
+          user2_id: user2_id,
+          workspace_id: workspace_id
+        })
+
+      dm ->
+        {:ok, dm}
     end
   end
 
@@ -331,19 +354,6 @@ defmodule Bridge.Chat do
   """
   def change_direct_message(%DirectMessage{} = direct_message, attrs \\ %{}) do
     DirectMessage.changeset(direct_message, attrs)
-  end
-
-  @doc """
-  Toggles the starred status of a direct message.
-
-  ## Examples
-
-      iex> toggle_direct_message_starred(direct_message)
-      {:ok, %DirectMessage{}}
-
-  """
-  def toggle_direct_message_starred(%DirectMessage{} = direct_message) do
-    update_direct_message(direct_message, %{starred: !direct_message.starred})
   end
 
   # ============================================================================

@@ -9,7 +9,8 @@ defmodule Bridge.Lists.List do
     field(:name, :string)
     field(:prefix, :string)
     field(:task_sequence_counter, :integer, default: 0)
-    field(:starred, :boolean, default: false)
+    field(:visibility, :string, default: "shared")
+    field(:starred, :boolean, virtual: true, default: false)
 
     belongs_to(:workspace, Bridge.Accounts.Workspace)
     belongs_to(:created_by, Bridge.Accounts.User)
@@ -22,8 +23,9 @@ defmodule Bridge.Lists.List do
   @doc "Changeset for creating a new list (accepts prefix)."
   def create_changeset(list, attrs) do
     list
-    |> cast(attrs, [:name, :prefix, :starred, :workspace_id, :created_by_id])
+    |> cast(attrs, [:name, :prefix, :workspace_id, :created_by_id, :visibility])
     |> validate_required([:name, :prefix, :workspace_id])
+    |> validate_inclusion(:visibility, ["private", "shared"])
     |> validate_format(:prefix, ~r/^[A-Z]{2,5}$/, message: "must be 2-5 uppercase letters")
     |> unique_constraint(:prefix,
       name: :lists_workspace_id_prefix_index,
@@ -34,7 +36,8 @@ defmodule Bridge.Lists.List do
   @doc "Changeset for updating a list (prefix is immutable)."
   def changeset(list, attrs) do
     list
-    |> cast(attrs, [:name, :starred, :workspace_id, :created_by_id])
+    |> cast(attrs, [:name, :workspace_id, :created_by_id, :visibility])
     |> validate_required([:name, :workspace_id])
+    |> validate_inclusion(:visibility, ["private", "shared"])
   end
 end

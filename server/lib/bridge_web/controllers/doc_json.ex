@@ -39,11 +39,20 @@ defmodule BridgeWeb.DocJSON do
       title: doc.title,
       content: doc.content,
       starred: doc.starred,
+      doc_folder_id: doc.doc_folder_id,
+      sequence_number: doc.sequence_number,
+      key: get_key(doc),
       created_by: get_created_by(doc),
       inserted_at: DateTime.to_iso8601(doc.inserted_at),
       updated_at: DateTime.to_iso8601(doc.updated_at)
     }
   end
+
+  defp get_key(%Doc{doc_folder: %{prefix: prefix}, sequence_number: seq})
+       when is_binary(prefix) and is_integer(seq),
+       do: "#{prefix}-#{seq}"
+
+  defp get_key(_), do: nil
 
   defp get_created_by(%Doc{author: %{id: id, name: name, email: email}}),
     do: %{id: id, name: name, email: email}

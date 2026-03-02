@@ -7,33 +7,90 @@ defmodule Bridge.Authorization.PolicyTest do
     setup do
       workspace = insert(:workspace)
       owner = insert(:user, workspace_id: workspace.id, role: "owner")
+      other_owner = insert(:user, workspace_id: workspace.id, role: "owner")
       project = insert(:project, workspace_id: workspace.id)
-      doc = insert(:doc, workspace_id: workspace.id, author_id: owner.id)
-      # Link doc to project via project_items
-      insert(:project_item, project_id: project.id, item_type: "doc", item_id: doc.id)
 
-      {:ok, owner: owner, workspace: workspace, project: project, doc: doc}
+      # Project doc folder owned by the owner
+      doc_folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: owner.id)
+      doc = insert(:doc, workspace_id: workspace.id, author_id: owner.id, doc_folder_id: doc_folder.id)
+      insert(:project_item, project_id: project.id, item_type: "doc_folder", item_id: doc_folder.id)
+
+      {:ok,
+       owner: owner,
+       other_owner: other_owner,
+       workspace: workspace,
+       project: project,
+       doc: doc,
+       doc_folder: doc_folder}
     end
 
-    test "owner can do anything", %{owner: owner, project: project, doc: doc} do
+    test "owner can manage workspace and project members", %{owner: owner, project: project} do
+      assert Policy.can?(owner, :manage_workspace_members, nil)
+      assert Policy.can?(owner, :manage_project_members, project)
+      assert Policy.can?(owner, :manage_projects, nil)
+    end
+
+    test "owner can view and mutate project items", %{owner: owner, project: project, doc: doc} do
       assert Policy.can?(owner, :view_project, project)
       assert Policy.can?(owner, :view_item, doc)
       assert Policy.can?(owner, :update_item, doc)
       assert Policy.can?(owner, :delete_item, doc)
-      assert Policy.can?(owner, :manage_workspace_members, nil)
-      assert Policy.can?(owner, :manage_project_members, project)
     end
 
-    test "owner can view workspace-level items (items not in any project)", %{
+    test "owner can view all shared non-project items", %{
       owner: owner,
+      other_owner: other_owner,
       workspace: workspace
     } do
-      # Doc without project association
-      workspace_doc =
-        insert(:doc, workspace_id: workspace.id, author_id: owner.id)
+      # Shared folder created by another owner
+      folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: other_owner.id, visibility: "shared")
+      doc = insert(:doc, workspace_id: workspace.id, author_id: other_owner.id, doc_folder_id: folder.id)
+      doc = Bridge.Repo.preload(doc, :doc_folder)
 
-      # Owner can still view it (owner can do anything)
-      assert Policy.can?(owner, :view_item, workspace_doc)
+      assert Policy.can?(owner, :view_item, doc)
+      assert Policy.can?(owner, :view_item, folder)
+    end
+
+    test "owner can view own private non-project items", %{owner: owner, workspace: workspace} do
+      folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: owner.id, visibility: "private")
+      doc = insert(:doc, workspace_id: workspace.id, author_id: owner.id, doc_folder_id: folder.id)
+      doc = Bridge.Repo.preload(doc, :doc_folder)
+
+      assert Policy.can?(owner, :view_item, folder)
+      assert Policy.can?(owner, :view_item, doc)
+    end
+
+    test "owner CANNOT view other owners' private non-project items", %{
+      owner: owner,
+      other_owner: other_owner,
+      workspace: workspace
+    } do
+      folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: other_owner.id, visibility: "private")
+      doc = insert(:doc, workspace_id: workspace.id, author_id: other_owner.id, doc_folder_id: folder.id)
+      doc = Bridge.Repo.preload(doc, :doc_folder)
+
+      refute Policy.can?(owner, :view_item, folder)
+      refute Policy.can?(owner, :view_item, doc)
+    end
+
+    test "owner can mutate any accessible item (including others' shared)", %{
+      owner: owner,
+      other_owner: other_owner,
+      workspace: workspace
+    } do
+      folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: other_owner.id, visibility: "shared")
+
+      assert Policy.can?(owner, :update_item, folder)
+      assert Policy.can?(owner, :delete_item, folder)
+    end
+
+    test "owner can set visibility to private", %{owner: owner} do
+      assert Policy.can?(owner, :set_visibility, "private")
+      assert Policy.can?(owner, :set_visibility, "shared")
+    end
+
+    test "owner can manage item members", %{owner: owner} do
+      assert Policy.can?(owner, :manage_item_members, nil)
     end
   end
 
@@ -41,25 +98,23 @@ defmodule Bridge.Authorization.PolicyTest do
     setup do
       workspace = insert(:workspace)
       member = insert(:user, workspace_id: workspace.id, role: "member")
+      other_member = insert(:user, workspace_id: workspace.id, role: "member")
       project = insert(:project, workspace_id: workspace.id)
       insert(:project_member, user_id: member.id, project_id: project.id)
 
-      other_user = insert(:user, workspace_id: workspace.id, role: "member")
+      # Project doc folder owned by member
+      member_folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: member.id)
+      member_doc = insert(:doc, workspace_id: workspace.id, author_id: member.id, doc_folder_id: member_folder.id)
+      insert(:project_item, project_id: project.id, item_type: "doc_folder", item_id: member_folder.id)
 
-      member_doc =
-        insert(:doc, workspace_id: workspace.id, author_id: member.id)
-
-      # Link member_doc to project
-      insert(:project_item, project_id: project.id, item_type: "doc", item_id: member_doc.id)
-
-      other_doc =
-        insert(:doc, workspace_id: workspace.id, author_id: other_user.id)
-
-      # Link other_doc to project
-      insert(:project_item, project_id: project.id, item_type: "doc", item_id: other_doc.id)
+      # Project doc folder owned by other
+      other_folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: other_member.id)
+      other_doc = insert(:doc, workspace_id: workspace.id, author_id: other_member.id, doc_folder_id: other_folder.id)
+      insert(:project_item, project_id: project.id, item_type: "doc_folder", item_id: other_folder.id)
 
       {:ok,
        member: member,
+       other_member: other_member,
        workspace: workspace,
        project: project,
        member_doc: member_doc,
@@ -70,10 +125,7 @@ defmodule Bridge.Authorization.PolicyTest do
       assert Policy.can?(member, :view_project, project)
     end
 
-    test "member cannot view projects they are not assigned to", %{
-      member: member,
-      workspace: workspace
-    } do
+    test "member cannot view projects they are not assigned to", %{member: member, workspace: workspace} do
       other_project = insert(:project, workspace_id: workspace.id)
       refute Policy.can?(member, :view_project, other_project)
     end
@@ -82,22 +134,51 @@ defmodule Bridge.Authorization.PolicyTest do
       assert Policy.can?(member, :view_item, doc)
     end
 
-    test "member cannot view workspace-level items (not in any project)", %{
+    test "member can view own non-project items (creator access)", %{member: member, workspace: workspace} do
+      folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: member.id, visibility: "shared")
+      doc = insert(:doc, workspace_id: workspace.id, author_id: member.id, doc_folder_id: folder.id)
+      doc = Bridge.Repo.preload(doc, :doc_folder)
+
+      assert Policy.can?(member, :view_item, folder)
+      assert Policy.can?(member, :view_item, doc)
+    end
+
+    test "member can view shared non-project items they are invited to", %{
       member: member,
+      other_member: other_member,
       workspace: workspace
     } do
-      # Doc without project association
-      workspace_doc =
-        insert(:doc, workspace_id: workspace.id, author_id: member.id)
+      channel = insert(:channel, workspace_id: workspace.id, created_by_id: other_member.id, visibility: "shared")
+      insert(:item_member, item_type: "channel", item_id: channel.id, user_id: member.id, workspace_id: workspace.id)
 
-      refute Policy.can?(member, :view_item, workspace_doc)
+      assert Policy.can?(member, :view_item, channel)
+    end
+
+    test "member cannot view shared non-project items they are NOT invited to", %{
+      member: member,
+      other_member: other_member,
+      workspace: workspace
+    } do
+      channel = insert(:channel, workspace_id: workspace.id, created_by_id: other_member.id, visibility: "shared")
+
+      refute Policy.can?(member, :view_item, channel)
+    end
+
+    test "member cannot view others' private non-project items", %{
+      member: member,
+      other_member: other_member,
+      workspace: workspace
+    } do
+      folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: other_member.id, visibility: "private")
+
+      refute Policy.can?(member, :view_item, folder)
     end
 
     test "member can update their own items", %{member: member, member_doc: doc} do
       assert Policy.can?(member, :update_item, doc)
     end
 
-    test "member cannot update others' items", %{member: member, other_doc: doc} do
+    test "member cannot update others' items even in same project", %{member: member, other_doc: doc} do
       refute Policy.can?(member, :update_item, doc)
     end
 
@@ -120,6 +201,30 @@ defmodule Bridge.Authorization.PolicyTest do
     test "member can comment on viewable items", %{member: member, member_doc: doc} do
       assert Policy.can?(member, :comment, doc)
     end
+
+    test "member cannot set visibility to private", %{member: member} do
+      refute Policy.can?(member, :set_visibility, "private")
+      assert Policy.can?(member, :set_visibility, "shared")
+    end
+
+    test "member can manage item members on own shared items", %{member: member, workspace: workspace} do
+      channel = insert(:channel, workspace_id: workspace.id, created_by_id: member.id, visibility: "shared")
+      assert Policy.can?(member, :manage_item_members, channel)
+    end
+
+    test "member cannot manage item members on others' items", %{
+      member: member,
+      other_member: other_member,
+      workspace: workspace
+    } do
+      channel = insert(:channel, workspace_id: workspace.id, created_by_id: other_member.id, visibility: "shared")
+      refute Policy.can?(member, :manage_item_members, channel)
+    end
+
+    test "member cannot manage item members on own private items", %{member: member, workspace: workspace} do
+      channel = insert(:channel, workspace_id: workspace.id, created_by_id: member.id, visibility: "private")
+      refute Policy.can?(member, :manage_item_members, channel)
+    end
   end
 
   describe "can?/3 for guests" do
@@ -131,17 +236,13 @@ defmodule Bridge.Authorization.PolicyTest do
 
       other_user = insert(:user, workspace_id: workspace.id, role: "owner")
 
-      guest_doc =
-        insert(:doc, workspace_id: workspace.id, author_id: guest.id)
+      guest_folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: guest.id)
+      guest_doc = insert(:doc, workspace_id: workspace.id, author_id: guest.id, doc_folder_id: guest_folder.id)
+      insert(:project_item, project_id: project.id, item_type: "doc_folder", item_id: guest_folder.id)
 
-      # Link guest_doc to project
-      insert(:project_item, project_id: project.id, item_type: "doc", item_id: guest_doc.id)
-
-      other_doc =
-        insert(:doc, workspace_id: workspace.id, author_id: other_user.id)
-
-      # Link other_doc to project
-      insert(:project_item, project_id: project.id, item_type: "doc", item_id: other_doc.id)
+      other_folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: other_user.id)
+      other_doc = insert(:doc, workspace_id: workspace.id, author_id: other_user.id, doc_folder_id: other_folder.id)
+      insert(:project_item, project_id: project.id, item_type: "doc_folder", item_id: other_folder.id)
 
       {:ok,
        guest: guest,
@@ -184,27 +285,38 @@ defmodule Bridge.Authorization.PolicyTest do
   describe "can?/3 for create_item" do
     setup do
       workspace = insert(:workspace)
+      owner = insert(:user, workspace_id: workspace.id, role: "owner")
       member = insert(:user, workspace_id: workspace.id, role: "member")
+      guest = insert(:user, workspace_id: workspace.id, role: "guest")
       project = insert(:project, workspace_id: workspace.id)
       insert(:project_member, user_id: member.id, project_id: project.id)
+      insert(:project_member, user_id: guest.id, project_id: project.id)
 
-      {:ok, member: member, workspace: workspace, project: project}
+      {:ok, owner: owner, member: member, guest: guest, workspace: workspace, project: project}
+    end
+
+    test "all roles can create workspace-level items (nil project)", %{
+      owner: owner,
+      member: member,
+      guest: guest
+    } do
+      assert Policy.can?(owner, :create_item, nil)
+      assert Policy.can?(member, :create_item, nil)
+      assert Policy.can?(guest, :create_item, nil)
     end
 
     test "member can create items in assigned projects", %{member: member, project: project} do
       assert Policy.can?(member, :create_item, project.id)
     end
 
-    test "member cannot create items in unassigned projects", %{
-      member: member,
-      workspace: workspace
-    } do
+    test "member cannot create items in unassigned projects", %{member: member, workspace: workspace} do
       other_project = insert(:project, workspace_id: workspace.id)
       refute Policy.can?(member, :create_item, other_project.id)
     end
 
-    test "member cannot create workspace-level items", %{member: member} do
-      refute Policy.can?(member, :create_item, nil)
+    test "owner can create items in any project", %{owner: owner, workspace: workspace} do
+      any_project = insert(:project, workspace_id: workspace.id)
+      assert Policy.can?(owner, :create_item, any_project.id)
     end
   end
 end

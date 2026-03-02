@@ -45,8 +45,9 @@ defmodule BridgeWeb.ProjectController do
 
     opts = build_pagination_opts(params)
     page = Projects.list_projects_with_items(workspace_id, user, opts)
+    entries = Bridge.Stars.mark_starred(page.entries, user.id, "project")
 
-    render(conn, :index, page: page)
+    render(conn, :index, page: %{page | entries: entries})
   end
 
   def create(conn, params) do
@@ -76,7 +77,9 @@ defmodule BridgeWeb.ProjectController do
   end
 
   def show(conn, _params) do
-    render(conn, :show, project: conn.assigns.project)
+    user = conn.assigns.current_user
+    project = Bridge.Stars.mark_starred(conn.assigns.project, user.id, "project")
+    render(conn, :show, project: project)
   end
 
   def update(conn, params) do

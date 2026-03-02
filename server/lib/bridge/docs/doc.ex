@@ -9,10 +9,12 @@ defmodule Bridge.Docs.Doc do
   schema "docs" do
     field(:title, :string)
     field(:content, :string, default: "")
-    field(:starred, :boolean, default: false)
+    field(:starred, :boolean, virtual: true, default: false)
+    field(:sequence_number, :integer)
 
     belongs_to(:workspace, Bridge.Accounts.Workspace)
     belongs_to(:author, Bridge.Accounts.User)
+    belongs_to(:doc_folder, Bridge.Docs.DocFolder)
 
     timestamps()
   end
@@ -20,8 +22,8 @@ defmodule Bridge.Docs.Doc do
   @doc false
   def changeset(doc, attrs) do
     doc
-    |> cast(attrs, [:title, :content, :starred, :workspace_id, :author_id])
-    |> validate_required([:title, :workspace_id, :author_id])
+    |> cast(attrs, [:title, :content, :workspace_id, :author_id, :doc_folder_id, :sequence_number])
+    |> validate_required([:title, :workspace_id, :author_id, :doc_folder_id])
     |> sanitize_content()
   end
 

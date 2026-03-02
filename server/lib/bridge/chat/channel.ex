@@ -7,7 +7,8 @@ defmodule Bridge.Chat.Channel do
   @timestamps_opts [type: :utc_datetime_usec]
   schema "channels" do
     field(:name, :string)
-    field(:starred, :boolean, default: false)
+    field(:visibility, :string, default: "shared")
+    field(:starred, :boolean, virtual: true, default: false)
 
     belongs_to(:workspace, Bridge.Accounts.Workspace)
     belongs_to(:created_by, Bridge.Accounts.User)
@@ -18,8 +19,9 @@ defmodule Bridge.Chat.Channel do
   @doc false
   def changeset(channel, attrs) do
     channel
-    |> cast(attrs, [:name, :starred, :workspace_id, :created_by_id])
+    |> cast(attrs, [:name, :workspace_id, :created_by_id, :visibility])
     |> validate_required([:name, :workspace_id])
+    |> validate_inclusion(:visibility, ["private", "shared"])
     |> unique_constraint([:workspace_id, :name],
       message: "a channel with this name already exists"
     )

@@ -47,20 +47,19 @@ defmodule BridgeWeb.DirectMessageController do
     opts = build_pagination_opts(params)
     # Only show DMs the current user is part of
     page = Chat.list_direct_messages_by_user(user.id, opts)
+    entries = Bridge.Stars.mark_starred(page.entries, user.id, "direct_message")
 
-    render(conn, :index, page: page)
+    render(conn, :index, page: %{page | entries: entries})
   end
 
-  def create(conn, params) do
+  def create(conn, %{"user2_id" => user2_id}) do
     current_user = conn.assigns.current_user
     workspace_id = conn.assigns.workspace_id
 
-    dm_params =
-      params
-      |> Map.put("user1_id", current_user.id)
-      |> Map.put("workspace_id", workspace_id)
+    with {:ok, direct_message} <-
+           Chat.create_or_get_direct_message(current_user.id, user2_id, workspace_id) do
+      direct_message = Bridge.Repo.preload(direct_message, [:user1, :user2])
 
-    with {:ok, direct_message} <- Chat.create_direct_message(dm_params) do
       conn
       |> put_status(:created)
       |> render(:show, direct_message: direct_message)
@@ -68,7 +67,9 @@ defmodule BridgeWeb.DirectMessageController do
   end
 
   def show(conn, _params) do
-    render(conn, :show, direct_message: conn.assigns.direct_message)
+    user = conn.assigns.current_user
+    dm = Bridge.Stars.mark_starred(conn.assigns.direct_message, user.id, "direct_message")
+    render(conn, :show, direct_message: dm)
   end
 
   def update(conn, params) do

@@ -24,11 +24,29 @@ defmodule Bridge.Factory do
     }
   end
 
+  def doc_folder_factory do
+    %Bridge.Docs.DocFolder{
+      name: Faker.Lorem.sentence(2..4),
+      prefix: sequence(:doc_folder_prefix, &String.upcase("D#{&1}")),
+      doc_sequence_counter: 0,
+      starred: false
+    }
+  end
+
+  def prefix_factory do
+    %Bridge.Namespaces.Prefix{
+      prefix: sequence(:ns_prefix, &String.upcase("P#{&1}")),
+      entity_type: "list",
+      entity_id: UUIDv7.generate()
+    }
+  end
+
   def doc_factory do
     %Bridge.Docs.Doc{
       title: Faker.Lorem.sentence(3..6),
       content: Faker.Lorem.paragraph(2..5),
-      starred: false
+      starred: false,
+      sequence_number: sequence(:doc_seq, & &1)
     }
   end
 
@@ -82,7 +100,14 @@ defmodule Bridge.Factory do
 
   def project_item_factory do
     %Bridge.Projects.ProjectItem{
-      item_type: "doc",
+      item_type: "doc_folder",
+      item_id: UUIDv7.generate()
+    }
+  end
+
+  def item_member_factory do
+    %Bridge.Projects.ItemMember{
+      item_type: "channel",
       item_id: UUIDv7.generate()
     }
   end

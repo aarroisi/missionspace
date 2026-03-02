@@ -187,11 +187,10 @@ defmodule BridgeWeb.ProjectControllerTest do
 
   describe "update" do
     test "updates project with valid attributes", %{conn: conn, workspace: workspace} do
-      project = insert(:project, workspace_id: workspace.id, name: "Old Name", starred: false)
+      project = insert(:project, workspace_id: workspace.id, name: "Old Name")
 
       update_params = %{
-        name: "New Name",
-        starred: true
+        name: "New Name"
       }
 
       response =
@@ -200,7 +199,6 @@ defmodule BridgeWeb.ProjectControllerTest do
         |> json_response(200)
 
       assert response["data"]["name"] == "New Name"
-      assert response["data"]["starred"] == true
     end
 
     test "updated project reflects changes in show", %{conn: conn, workspace: workspace} do

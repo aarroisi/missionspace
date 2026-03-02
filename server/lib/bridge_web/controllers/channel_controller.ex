@@ -55,8 +55,9 @@ defmodule BridgeWeb.ChannelController do
 
     opts = build_pagination_opts(params)
     page = Chat.list_channels(workspace_id, user, opts)
+    entries = Bridge.Stars.mark_starred(page.entries, user.id, "channel")
 
-    render(conn, :index, page: page)
+    render(conn, :index, page: %{page | entries: entries})
   end
 
   def create(conn, params) do
@@ -76,7 +77,9 @@ defmodule BridgeWeb.ChannelController do
   end
 
   def show(conn, _params) do
-    render(conn, :show, channel: conn.assigns.channel)
+    user = conn.assigns.current_user
+    channel = Bridge.Stars.mark_starred(conn.assigns.channel, user.id, "channel")
+    render(conn, :show, channel: channel)
   end
 
   def update(conn, params) do

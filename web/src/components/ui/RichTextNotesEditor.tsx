@@ -55,7 +55,7 @@ export function RichTextNotesEditor({
   if (isEditing) {
     return (
       <div className={className}>
-        <div className="border border-dark-border rounded-lg overflow-hidden">
+        <div className="border border-dark-border rounded-lg overflow-hidden bg-dark-surface">
           <RichTextEditor
             value={editValue}
             onChange={setEditValue}
@@ -96,7 +96,7 @@ export function RichTextNotesEditor({
       <div className={className}>
         <div
           onClick={handleStartEdit}
-          className="border border-dark-border rounded-lg p-3 min-h-[80px] cursor-pointer hover:bg-dark-surface/50 transition-colors group relative"
+          className="border border-dark-border rounded-lg p-3 min-h-[80px] cursor-pointer bg-dark-surface hover:bg-dark-surface/80 transition-colors group relative"
         >
           <span className="text-dark-text-muted text-sm">{placeholder}</span>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -113,7 +113,7 @@ export function RichTextNotesEditor({
       <div
         onClick={handleStartEdit}
         className={clsx(
-          "border border-dark-border rounded-lg p-3 cursor-pointer hover:bg-dark-surface/50 transition-colors group relative",
+          "border border-dark-border rounded-lg p-3 cursor-pointer bg-dark-surface hover:bg-dark-surface/80 transition-colors group relative",
         )}
       >
         <ContentRenderer

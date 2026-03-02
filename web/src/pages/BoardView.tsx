@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Star,
   Trash2,
+  Users,
 } from "lucide-react";
 import {
   DndContext,
@@ -36,6 +37,7 @@ import { KanbanBoard } from "@/components/features/KanbanBoard";
 import { TaskDetailModal } from "@/components/features/TaskDetailModal";
 import { ChildTaskDetailModal } from "@/components/features/ChildTaskDetailModal";
 import { StatusManager } from "@/components/features/StatusManager";
+import { ManageMembersModal } from "@/components/features/ManageMembersModal";
 import { useBoardStore } from "@/stores/boardStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -168,12 +170,13 @@ export function BoardView() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedChildTaskId, setSelectedChildTaskId] = useState<string | null>(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // Get view mode and task ID from URL
+  // Get view mode and task/subtask IDs from URL
   const viewMode = (searchParams.get("view") as "board" | "table") || "board";
-  const selectedTaskId = searchParams.get("task");
+  const taskParam = searchParams.get("task");
+  const subtaskParam = searchParams.get("subtask");
   const highlightCommentId = searchParams.get("comment");
 
   const setViewMode = (mode: "board" | "table") => {
@@ -192,13 +195,14 @@ export function BoardView() {
     : undefined;
   const rawBoardTasks = boardId ? tasks[boardId] : undefined;
   const boardTasks = Array.isArray(rawBoardTasks) ? rawBoardTasks : [];
-  const selectedTask = boardTasks.find((t) => t.id === selectedTaskId);
-  const taskChildTasks = selectedTaskId ? childTasks[selectedTaskId] || [] : [];
-  const selectedChildTask = selectedChildTaskId
-    ? taskChildTasks.find((t) => t.id === selectedChildTaskId)
+
+  const selectedTask = taskParam ? boardTasks.find((t) => t.id === taskParam) : undefined;
+  const taskChildTasks = taskParam ? childTasks[taskParam] || [] : [];
+  const selectedChildTask = subtaskParam
+    ? taskChildTasks.find((t) => t.id === subtaskParam)
     : undefined;
-  const childTaskMessages = selectedChildTaskId
-    ? messages[`task:${selectedChildTaskId}`] || []
+  const childTaskMessages = subtaskParam
+    ? messages[`task:${subtaskParam}`] || []
     : [];
 
   // Drag and drop sensors
@@ -316,17 +320,17 @@ export function BoardView() {
   }, [boardId, fetchTasks]);
 
   useEffect(() => {
-    if (selectedTaskId) {
-      fetchChildTasks(selectedTaskId);
-      fetchMessages("task", selectedTaskId);
+    if (taskParam) {
+      fetchChildTasks(taskParam);
+      fetchMessages("task", taskParam);
     }
-  }, [selectedTaskId, fetchChildTasks, fetchMessages]);
+  }, [taskParam, fetchChildTasks, fetchMessages]);
 
   useEffect(() => {
-    if (selectedChildTaskId) {
-      fetchMessages("task", selectedChildTaskId);
+    if (subtaskParam) {
+      fetchMessages("task", subtaskParam);
     }
-  }, [selectedChildTaskId, fetchMessages]);
+  }, [subtaskParam, fetchMessages]);
 
   // Fetch workspace members for assignee dropdown
   useEffect(() => {
@@ -389,12 +393,19 @@ export function BoardView() {
   };
 
   const handleCloseTask = () => {
-    setSelectedChildTaskId(null);
     setSearchParams({});
   };
 
   const handleChildTaskClick = (childTaskId: string) => {
-    setSelectedChildTaskId(childTaskId);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("subtask", childTaskId);
+    setSearchParams(newParams);
+  };
+
+  const handleCloseChildTask = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("subtask");
+    setSearchParams(newParams);
   };
 
   const handleAddTask = (statusId: string) => {
@@ -430,7 +441,7 @@ export function BoardView() {
         statuses={board?.statuses || []}
         onTaskClick={handleTaskClick}
         onAddTask={handleAddTask}
-        selectedTaskId={selectedTaskId}
+        selectedTaskId={taskParam}
       />
     </div>
   );
@@ -524,7 +535,7 @@ export function BoardView() {
                         <SortableTaskRow
                           key={task.id}
                           task={task}
-                          isSelected={selectedTaskId === task.id}
+                          isSelected={taskParam === task.id}
                           onClick={() => handleTaskClick(task.id)}
                         />
                       ))}
@@ -576,7 +587,7 @@ export function BoardView() {
                   <SortableTaskRow
                     key={task.id}
                     task={task}
-                    isSelected={selectedTaskId === task.id}
+                    isSelected={taskParam === task.id}
                     onClick={() => handleTaskClick(task.id)}
                   />
                 ))}
@@ -701,6 +712,14 @@ export function BoardView() {
               </button>
             }
           >
+            {!projectId && (
+              <DropdownItem onClick={() => setShowMembersModal(true)}>
+                <span className="flex items-center gap-2">
+                  <Users size={16} />
+                  Members
+                </span>
+              </DropdownItem>
+            )}
             <DropdownItem onClick={handleToggleStar}>
               <span className="flex items-center gap-2">
                 <Star
@@ -732,12 +751,12 @@ export function BoardView() {
         <TaskDetailModal
           task={selectedTask}
           childTasks={taskChildTasks}
-          comments={messages[`task:${selectedTaskId}`] || []}
+          comments={messages[`task:${taskParam}`] || []}
           statuses={board?.statuses || []}
           workspaceMembers={workspaceMembers}
           onClose={handleCloseTask}
           onChildTaskClick={handleChildTaskClick}
-          highlightCommentId={highlightCommentId}
+          highlightCommentId={!subtaskParam ? highlightCommentId : null}
         />
       )}
 
@@ -748,7 +767,8 @@ export function BoardView() {
           parentTask={selectedTask}
           comments={childTaskMessages}
           workspaceMembers={workspaceMembers}
-          onClose={() => setSelectedChildTaskId(null)}
+          onClose={handleCloseChildTask}
+          highlightCommentId={subtaskParam ? highlightCommentId : null}
         />
       )}
 
@@ -811,6 +831,16 @@ export function BoardView() {
         onConfirm={handleDeleteBoard}
         onCancel={() => setShowDeleteConfirm(false)}
       />
+
+      {/* Members Modal (standalone items only, not project items) */}
+      {!projectId && boardId && (
+        <ManageMembersModal
+          itemKind="list"
+          itemId={boardId}
+          isOpen={showMembersModal}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
     </div>
   );
 }

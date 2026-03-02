@@ -3,9 +3,10 @@ defmodule Bridge.Authorization.Policy do
   Authorization policy module that determines if a user can perform an action on a resource.
 
   Roles:
-  - owner: Full access to everything in workspace
-  - member: Access to assigned projects only, can update only own items
-  - guest: Same as member but limited to one project
+  - owner: Access to all shared items + own private items. Can mutate any accessible item.
+  - member: Access to project items (via membership) + own items + invited shared items.
+           Can only mutate own items.
+  - guest: Same as member but limited to one project or item total.
   """
 
   alias Bridge.Accounts.User
@@ -17,70 +18,123 @@ defmodule Bridge.Authorization.Policy do
   """
   def can?(user, action, resource \\ nil)
 
-  # Owner can do anything
-  def can?(%User{role: "owner"}, _action, _resource), do: true
+  # --- Workspace management: owner only ---
+  def can?(%User{role: "owner"}, :manage_workspace_members, _), do: true
+  def can?(_user, :manage_workspace_members, _), do: false
 
-  # Workspace member management - owner only (already handled above)
-  def can?(_user, :manage_workspace_members, _resource), do: false
+  # --- Project member management: owner only ---
+  def can?(%User{role: "owner"}, :manage_project_members, _), do: true
+  def can?(_user, :manage_project_members, _), do: false
 
-  # Project member management - owner only
-  def can?(_user, :manage_project_members, _resource), do: false
+  # --- Project management (create/update/delete projects): owner only ---
+  def can?(%User{role: "owner"}, :manage_projects, _), do: true
+  def can?(_user, :manage_projects, _), do: false
 
-  # Project management (create/update/delete projects) - owner only
-  def can?(_user, :manage_projects, _resource), do: false
+  # --- Item member management: owner or item creator (if shared) ---
+  def can?(%User{role: "owner"}, :manage_item_members, _), do: true
 
-  # View project - must be member of project
+  def can?(user, :manage_item_members, item) do
+    is_creator?(user, item) and get_visibility(item) == "shared"
+  end
+
+  # --- Visibility management: only owner can set private ---
+  def can?(%User{role: "owner"}, :set_visibility, _), do: true
+  def can?(_user, :set_visibility, "shared"), do: true
+  def can?(_user, :set_visibility, _), do: false
+
+  # --- View project ---
+  def can?(%User{role: "owner"}, :view_project, _project), do: true
+
   def can?(user, :view_project, project) do
     is_project_member?(user, project.id)
   end
 
-  # View item - must have access to item's project
+  # --- View item ---
   def can?(user, :view_item, item) do
-    case get_project_id(item) do
-      nil -> false
-      project_id -> is_project_member?(user, project_id)
-    end
+    can_access_item?(user, item)
   end
 
-  # Create item in project - must be member of that project
-  def can?(_user, :create_item, nil), do: false
+  # --- Create item ---
+  # Create without project (workspace-level): allowed for all roles
+  def can?(_user, :create_item, nil), do: true
+  # Create in project: owner always, others need membership
+  def can?(%User{role: "owner"}, :create_item, _project_id), do: true
 
-  def can?(user, :create_item, project_id) do
+  def can?(user, :create_item, project_id) when is_binary(project_id) do
     is_project_member?(user, project_id)
   end
 
-  # Update item - must be creator and have project access
+  # --- Update item ---
   def can?(user, :update_item, item) do
-    case get_project_id(item) do
-      nil -> false
-      project_id -> is_creator?(user, item) and is_project_member?(user, project_id)
-    end
+    can_mutate_item?(user, item)
   end
 
-  # Delete item - must be creator and have project access
+  # --- Delete item ---
   def can?(user, :delete_item, item) do
-    case get_project_id(item) do
-      nil -> false
-      project_id -> is_creator?(user, item) and is_project_member?(user, project_id)
-    end
+    can_mutate_item?(user, item)
   end
 
-  # Comment - can view = can comment
+  # --- Comment: can view = can comment ---
   def can?(user, :comment, item) do
-    can?(user, :view_item, item)
+    can_access_item?(user, item)
   end
 
   # Default deny
   def can?(_user, _action, _resource), do: false
 
-  # Helper: Check if user is a member of the project
+  # ============================================================
+  # Private helpers
+  # ============================================================
+
+  # Unified access check for an item.
+  # Two paths: project item vs non-project item.
+  defp can_access_item?(user, item) do
+    case get_project_id(item) do
+      nil -> can_access_non_project_item?(user, item)
+      project_id -> can_access_project_item?(user, project_id)
+    end
+  end
+
+  # Project items: owner always, others need project membership
+  defp can_access_project_item?(%User{role: "owner"}, _project_id), do: true
+
+  defp can_access_project_item?(user, project_id) do
+    is_project_member?(user, project_id)
+  end
+
+  # Non-project items: check visibility rules
+  defp can_access_non_project_item?(user, item) do
+    cond do
+      # Creator always has access to their own items
+      is_creator?(user, item) -> true
+      # Private: only creator (handled above, so deny here)
+      get_visibility(item) == "private" -> false
+      # Shared: owners have access to all shared items
+      user.role == "owner" -> true
+      # Shared: invited members/guests have access
+      is_item_member?(user, item) -> true
+      # Otherwise deny
+      true -> false
+    end
+  end
+
+  # Mutation check: access + ownership constraint for non-owners
+  defp can_mutate_item?(%User{role: "owner"} = user, item) do
+    can_access_item?(user, item)
+  end
+
+  defp can_mutate_item?(user, item) do
+    can_access_item?(user, item) and is_creator?(user, item)
+  end
+
+  # --- Existing helpers ---
+
   defp is_project_member?(%User{id: user_id}, project_id) when not is_nil(project_id) do
     Projects.is_member?(project_id, user_id)
   end
 
   defp is_project_member?(_user, _project_id), do: false
 
-  # Helper: Check if user is the creator of the item
   defp is_creator?(%User{id: user_id}, item) do
     get_creator_id(item) == user_id
   end
@@ -89,10 +143,42 @@ defmodule Bridge.Authorization.Policy do
   defp get_creator_id(%{created_by_id: created_by_id}), do: created_by_id
   defp get_creator_id(_), do: nil
 
+  # --- New helpers ---
+
+  defp get_visibility(%{visibility: v}) when is_binary(v), do: v
+  # Docs inherit visibility from their folder (must be preloaded)
+  defp get_visibility(%Bridge.Docs.Doc{doc_folder: %{visibility: v}}), do: v
+  # Tasks inherit visibility from their list (must be preloaded)
+  defp get_visibility(%Bridge.Lists.Task{list: %{visibility: v}}), do: v
+  # Fallback for items without visibility field
+  defp get_visibility(_), do: "shared"
+
+  defp is_item_member?(%User{id: user_id}, item) do
+    {item_type, item_id} = get_item_type_and_id(item)
+
+    if item_type && item_id do
+      Projects.is_item_member?(item_type, item_id, user_id)
+    else
+      false
+    end
+  end
+
+  defp get_item_type_and_id(%Bridge.Lists.List{id: id}), do: {"list", id}
+  defp get_item_type_and_id(%Bridge.Docs.DocFolder{id: id}), do: {"doc_folder", id}
+  defp get_item_type_and_id(%Bridge.Chat.Channel{id: id}), do: {"channel", id}
+  defp get_item_type_and_id(%Bridge.Docs.Doc{doc_folder_id: fid}), do: {"doc_folder", fid}
+  defp get_item_type_and_id(%Bridge.Lists.Task{list_id: lid}), do: {"list", lid}
+  defp get_item_type_and_id(_), do: {nil, nil}
+
   # Helper: Get project_id from item using project_items lookup
-  # For docs, lists, channels - look up via Projects.get_item_project_id
-  defp get_project_id(%Bridge.Docs.Doc{id: id}), do: Projects.get_item_project_id("doc", id)
-  defp get_project_id(%Bridge.Lists.List{id: id}), do: Projects.get_item_project_id("list", id)
+  defp get_project_id(%Bridge.Docs.DocFolder{id: id}),
+    do: Projects.get_item_project_id("doc_folder", id)
+
+  defp get_project_id(%Bridge.Docs.Doc{doc_folder_id: folder_id}),
+    do: Projects.get_item_project_id("doc_folder", folder_id)
+
+  defp get_project_id(%Bridge.Lists.List{id: id}),
+    do: Projects.get_item_project_id("list", id)
 
   defp get_project_id(%Bridge.Chat.Channel{id: id}),
     do: Projects.get_item_project_id("channel", id)

@@ -2,19 +2,18 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjectStore } from "@/stores/projectStore";
 import { useBoardStore } from "@/stores/boardStore";
-import { useDocStore } from "@/stores/docStore";
+import { useDocFolderStore } from "@/stores/docFolderStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import {
-  CheckSquare,
-  FileText,
+  Briefcase,
   Folder,
   Kanban,
   MessageSquare,
-  Square,
+  FileText,
 } from "lucide-react";
-import { Task } from "@/types";
+import { Task, Doc } from "@/types";
 import { api } from "@/lib/api";
 
 export function HomePage() {
@@ -23,22 +22,29 @@ export function HomePage() {
   const { setActiveItem } = useUIStore();
   const projects = useProjectStore((state) => state.projects) || [];
   const boards = useBoardStore((state) => state.boards) || [];
-  const docs = useDocStore((state) => state.docs) || [];
+  const docFolders = useDocFolderStore((state) => state.folders) || [];
   const channels = useChatStore((state) => state.channels) || [];
 
   const [myTasks, setMyTasks] = useState<Task[]>([]);
-  const [myChildTasks, setMyChildTasks] = useState<Task[]>([]);
+  const [starredTasks, setStarredTasks] = useState<Task[]>([]);
+  const [starredDocs, setStarredDocs] = useState<Doc[]>([]);
 
-  // Fetch my tasks and child tasks
+  // Fetch all tasks assigned to me and starred tasks/docs
   useEffect(() => {
     const fetchMyItems = async () => {
       try {
-        const [tasksRes, childTasksRes] = await Promise.all([
+        const [tasksRes, childTasksRes, starredTasksRes, starredDocsRes] = await Promise.all([
           api.get<Task[]>("/tasks?assigned_to_me=true"),
           api.get<Task[]>("/tasks?assigned_to_me=true&is_subtask=true"),
+          api.get<Task[]>("/tasks?starred=true"),
+          api.get<{ data: Doc[] }>("/docs?starred=true"),
         ]);
-        setMyTasks(Array.isArray(tasksRes) ? tasksRes : []);
-        setMyChildTasks(Array.isArray(childTasksRes) ? childTasksRes : []);
+        const tasks = Array.isArray(tasksRes) ? tasksRes : [];
+        const childTasks = Array.isArray(childTasksRes) ? childTasksRes : [];
+        setMyTasks([...tasks, ...childTasks]);
+        setStarredTasks(Array.isArray(starredTasksRes) ? starredTasksRes : []);
+        const docsData = starredDocsRes?.data;
+        setStarredDocs(Array.isArray(docsData) ? docsData : []);
       } catch (error) {
         console.error("Failed to fetch my items:", error);
       }
@@ -49,13 +55,13 @@ export function HomePage() {
   // Ensure all values are arrays
   const safeProjects = Array.isArray(projects) ? projects : [];
   const safeBoards = Array.isArray(boards) ? boards : [];
-  const safeDocs = Array.isArray(docs) ? docs : [];
+  const safeDocFolders = Array.isArray(docFolders) ? docFolders : [];
   const safeChannels = Array.isArray(channels) ? channels : [];
 
   // Helper to find project containing an item
   const findProjectForItem = (
     itemId: string,
-    itemType: "board" | "doc" | "channel",
+    itemType: "board" | "doc_folder" | "channel",
   ) => {
     return safeProjects.find((p) =>
       p.items?.some((i) => i.itemId === itemId && i.itemType === itemType),
@@ -73,12 +79,12 @@ export function HomePage() {
         type: "board" as const,
         project: findProjectForItem(b.id, "board"),
       })),
-    ...safeDocs
-      .filter((d) => d.starred)
-      .map((d) => ({
-        ...d,
-        type: "doc" as const,
-        project: findProjectForItem(d.id, "doc"),
+    ...safeDocFolders
+      .filter((f) => f.starred)
+      .map((f) => ({
+        ...f,
+        type: "doc_folder" as const,
+        project: findProjectForItem(f.id, "doc_folder"),
       })),
     ...safeChannels
       .filter((c) => c.starred)
@@ -87,6 +93,18 @@ export function HomePage() {
         type: "channel" as const,
         project: findProjectForItem(c.id, "channel"),
       })),
+    ...starredTasks.map((t) => ({
+      ...t,
+      name: t.title,
+      type: "task" as const,
+      project: undefined,
+    })),
+    ...starredDocs.map((d) => ({
+      ...d,
+      name: d.title,
+      type: "doc" as const,
+      project: undefined,
+    })),
   ];
 
   const handleItemClick = (item: (typeof starredItems)[number]) => {
@@ -104,11 +122,11 @@ export function HomePage() {
           navigate(`/boards/${item.id}`);
         }
         break;
-      case "doc":
+      case "doc_folder":
         if (projectId) {
-          navigate(`/projects/${projectId}/docs/${item.id}`);
+          navigate(`/projects/${projectId}/doc-folders/${item.id}`);
         } else {
-          navigate(`/docs/${item.id}`);
+          navigate(`/doc-folders/${item.id}`);
         }
         break;
       case "channel":
@@ -119,6 +137,27 @@ export function HomePage() {
           navigate(`/channels/${item.id}`);
         }
         break;
+      case "task": {
+        const task = item as Task & { type: "task" };
+        const boardId = task.boardId || task.parent?.boardId;
+        const taskParam = task.parentId
+          ? `?task=${task.parentId}&subtask=${task.id}`
+          : `?task=${task.id}`;
+        if (boardId) {
+          setActiveItem({ type: "boards", id: boardId });
+          navigate(`/boards/${boardId}${taskParam}`);
+        }
+        break;
+      }
+      case "doc": {
+        const doc = item as Doc & { type: "doc" };
+        if (doc.docFolderId) {
+          navigate(`/doc-folders/${doc.docFolderId}/docs/${doc.id}`);
+        } else {
+          navigate(`/docs/${doc.id}`);
+        }
+        break;
+      }
     }
   };
 
@@ -127,7 +166,6 @@ export function HomePage() {
       <h1 className="text-3xl font-bold text-dark-text mb-2">
         {workspace?.name || "Home"}
       </h1>
-      <p className="text-dark-text-muted mb-8">Welcome to your workspace!</p>
 
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-dark-text mb-4">
@@ -145,31 +183,33 @@ export function HomePage() {
               >
                 <div className="flex items-center gap-2 mb-2">
                   {item.type === "project" && (
-                    <Folder size={16} className="text-orange-400" />
+                    <Briefcase size={16} className="text-orange-400" />
                   )}
                   {item.type === "board" && (
+                    <Kanban size={16} className="text-blue-400" />
+                  )}
+                  {item.type === "doc_folder" && (
+                    <Folder size={16} className="text-green-400" />
+                  )}
+                  {item.type === "channel" && (
+                    <MessageSquare size={16} className="text-purple-400" />
+                  )}
+                  {item.type === "task" && (
                     <Kanban size={16} className="text-blue-400" />
                   )}
                   {item.type === "doc" && (
                     <FileText size={16} className="text-green-400" />
                   )}
-                  {item.type === "channel" && (
-                    <MessageSquare size={16} className="text-purple-400" />
-                  )}
                   <span className="text-xs text-dark-text-muted uppercase">
-                    {item.type}
+                    {item.type === "doc_folder" ? "folder" : item.type}
                   </span>
                 </div>
                 <h3 className="font-medium text-dark-text">
-                  {"name" in item
-                    ? item.name
-                    : "title" in item
-                      ? item.title
-                      : ""}
+                  {"name" in item ? item.name : ""}
                 </h3>
                 {item.project && (
                   <p className="text-xs text-dark-text-muted mt-1 flex items-center gap-1">
-                    <Folder size={12} />
+                    <Briefcase size={12} />
                     {item.project.name}
                   </p>
                 )}
@@ -179,40 +219,38 @@ export function HomePage() {
         )}
       </div>
 
-      {/* My Tasks and Subtasks - 2 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* My Tasks */}
-        <div>
-          <h2 className="text-lg font-semibold text-dark-text mb-4">
-            My Tasks
-          </h2>
-          {myTasks.length === 0 ? (
-            <p className="text-dark-text-muted">No tasks assigned to you</p>
-          ) : (
-            <div className="space-y-2">
-              {myTasks.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => {
-                    setActiveItem({ type: "boards", id: task.boardId });
-                    navigate(`/boards/${task.boardId}?task=${task.id}`);
-                  }}
-                  className="p-3 bg-dark-bg border border-dark-border rounded-lg hover:border-blue-500 transition-colors cursor-pointer flex items-center gap-3"
-                >
-                  <Kanban size={16} className="text-blue-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-dark-text truncate">
-                      {task.key && (
-                        <span className="text-xs font-mono text-dark-text-muted mr-2">
-                          {task.key}
-                        </span>
-                      )}
-                      {task.title}
-                    </h3>
-                  </div>
-                  {task.status && (
+      {/* My Tasks */}
+      <div>
+        <h2 className="text-lg font-semibold text-dark-text mb-4">
+          My Tasks
+        </h2>
+        {myTasks.length === 0 ? (
+          <p className="text-dark-text-muted">No tasks assigned to you</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {myTasks.map((task) => (
+              <div
+                key={task.id}
+                onClick={() => {
+                  const boardId = task.boardId || task.parent?.boardId;
+                  const taskParam = task.parentId
+                    ? `?task=${task.parentId}&subtask=${task.id}`
+                    : `?task=${task.id}`;
+                  if (boardId) {
+                    setActiveItem({ type: "boards", id: boardId });
+                    navigate(`/boards/${boardId}${taskParam}`);
+                  }
+                }}
+                className="p-4 bg-dark-bg border border-dark-border rounded-lg hover:border-blue-500 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Kanban size={16} className="text-blue-400" />
+                  <span className="text-xs text-dark-text-muted uppercase">
+                    Task
+                  </span>
+                  {task.status ? (
                     <span
-                      className="px-2 py-0.5 text-xs font-medium rounded"
+                      className="ml-auto px-2 py-0.5 text-xs font-medium rounded"
                       style={{
                         backgroundColor: `${task.status.color}20`,
                         color: task.status.color,
@@ -220,75 +258,30 @@ export function HomePage() {
                     >
                       {task.status.name}
                     </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* My Subtasks */}
-        <div>
-          <h2 className="text-lg font-semibold text-dark-text mb-4">
-            My Subtasks
-          </h2>
-          {myChildTasks.length === 0 ? (
-            <p className="text-dark-text-muted">No subtasks assigned to you</p>
-          ) : (
-            <div className="space-y-2">
-              {myChildTasks.map((child) => (
-                <div
-                  key={child.id}
-                  onClick={() => {
-                    if (child.parent?.boardId) {
-                      setActiveItem({
-                        type: "boards",
-                        id: child.parent.boardId,
-                      });
-                      navigate(
-                        `/boards/${child.parent.boardId}?task=${child.parentId}`,
-                      );
-                    }
-                  }}
-                  className="p-3 bg-dark-bg border border-dark-border rounded-lg hover:border-blue-500 transition-colors cursor-pointer flex items-center gap-3"
-                >
-                  {child.isCompleted ? (
-                    <CheckSquare
-                      size={16}
-                      className="text-green-500 flex-shrink-0"
-                    />
-                  ) : (
-                    <Square
-                      size={16}
-                      className="text-dark-text-muted flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3
-                      className={`font-medium truncate ${child.isCompleted ? "text-dark-text-muted line-through" : "text-dark-text"}`}
+                  ) : task.isCompleted !== undefined && (
+                    <span
+                      className={`ml-auto px-2 py-0.5 text-xs font-medium rounded ${
+                        task.isCompleted
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-yellow-500/20 text-yellow-400"
+                      }`}
                     >
-                      {child.key && (
-                        <span className="text-xs font-mono text-dark-text-muted mr-2">
-                          {child.key}
-                        </span>
-                      )}
-                      {child.title}
-                    </h3>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 text-xs font-medium rounded ${
-                      child.isCompleted
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-yellow-500/20 text-yellow-400"
-                    }`}
-                  >
-                    {child.isCompleted ? "Done" : "Pending"}
-                  </span>
+                      {task.isCompleted ? "Done" : "Pending"}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <h3 className="font-medium text-dark-text">
+                  {task.key && (
+                    <span className="text-xs font-mono text-dark-text-muted mr-2">
+                      {task.key}
+                    </span>
+                  )}
+                  {task.title}
+                </h3>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

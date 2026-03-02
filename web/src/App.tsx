@@ -6,6 +6,7 @@ import { HomePage } from "./pages/HomePage";
 import { EmptyState } from "./pages/EmptyState";
 import { ProjectPage } from "./pages/ProjectPage";
 import { BoardView } from "./pages/BoardView";
+import { DocFolderView } from "./pages/DocFolderView";
 import { DocView } from "./pages/DocView";
 import { ChatView } from "./pages/ChatView";
 import { GeneralSettingsPage } from "./pages/GeneralSettingsPage";
@@ -18,8 +19,11 @@ import { useAuthStore } from "./stores/authStore";
 import { useProjectStore } from "./stores/projectStore";
 import { useBoardStore } from "./stores/boardStore";
 import { useDocStore } from "./stores/docStore";
+import { useDocFolderStore } from "./stores/docFolderStore";
 import { useChatStore } from "./stores/chatStore";
 import { useNotificationChannel } from "./hooks/useNotificationChannel";
+import { SearchModal } from "./components/features/SearchModal";
+import { useSearchStore } from "./stores/searchStore";
 
 function App() {
   const { checkAuth, fetchMembers, isAuthenticated, isLoading } =
@@ -27,6 +31,7 @@ function App() {
   const { fetchProjects } = useProjectStore();
   const { fetchBoards } = useBoardStore();
   const { fetchDocs } = useDocStore();
+  const { fetchFolders: fetchDocFolders } = useDocFolderStore();
   const { fetchChannels, fetchDirectMessages } = useChatStore();
 
   useEffect(() => {
@@ -37,6 +42,7 @@ function App() {
     if (isAuthenticated) {
       fetchProjects();
       fetchBoards();
+      fetchDocFolders();
       fetchDocs();
       fetchChannels();
       fetchDirectMessages();
@@ -46,6 +52,7 @@ function App() {
     isAuthenticated,
     fetchProjects,
     fetchBoards,
+    fetchDocFolders,
     fetchDocs,
     fetchChannels,
     fetchDirectMessages,
@@ -54,6 +61,23 @@ function App() {
 
   // Connect to notification channel for real-time updates
   useNotificationChannel();
+
+  // Global Cmd+K / Ctrl+K shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        const { isOpen, open, close } = useSearchStore.getState();
+        if (isOpen) {
+          close();
+        } else {
+          open();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   if (isLoading) {
     return (
@@ -117,6 +141,23 @@ function App() {
           }
         />
         <Route
+          path="/projects/:projectId/doc-folders/:id"
+          element={
+            <MainLayout>
+              <DocFolderView />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/projects/:projectId/doc-folders/:folderId/docs/:id"
+          element={
+            <MainLayout>
+              <DocFolderView />
+              <DocView />
+            </MainLayout>
+          }
+        />
+        <Route
           path="/projects/:projectId/docs/:id"
           element={
             <MainLayout>
@@ -145,6 +186,23 @@ function App() {
           element={
             <MainLayout>
               <BoardView />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/doc-folders/:id"
+          element={
+            <MainLayout>
+              <DocFolderView />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/doc-folders/:folderId/docs/:id"
+          element={
+            <MainLayout>
+              <DocFolderView />
+              <DocView />
             </MainLayout>
           }
         />
@@ -218,6 +276,7 @@ function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <SearchModal />
       <ToastContainer />
     </MemberProfileProvider>
   );

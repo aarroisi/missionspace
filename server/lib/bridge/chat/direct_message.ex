@@ -6,7 +6,7 @@ defmodule Bridge.Chat.DirectMessage do
   @foreign_key_type Ecto.UUID
   @timestamps_opts [type: :utc_datetime_usec]
   schema "direct_messages" do
-    field(:starred, :boolean, default: false)
+    field(:starred, :boolean, virtual: true, default: false)
 
     belongs_to(:workspace, Bridge.Accounts.Workspace)
     belongs_to(:user1, Bridge.Accounts.User)
@@ -18,7 +18,7 @@ defmodule Bridge.Chat.DirectMessage do
   @doc false
   def changeset(direct_message, attrs) do
     direct_message
-    |> cast(attrs, [:starred, :workspace_id, :user1_id, :user2_id])
+    |> cast(attrs, [:workspace_id, :user1_id, :user2_id])
     |> validate_required([:workspace_id, :user1_id, :user2_id])
     |> unique_constraint([:user1_id, :user2_id])
   end

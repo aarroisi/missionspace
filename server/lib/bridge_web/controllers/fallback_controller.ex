@@ -35,6 +35,13 @@ defmodule BridgeWeb.FallbackController do
     |> json(%{errors: %{user_id: ["guest can only be assigned to one project"]}})
   end
 
+  # Handle guest item limit error
+  def call(conn, {:error, :guest_item_limit}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: %{user_id: ["guest can only be assigned to one project or item"]}})
+  end
+
   # Handle forbidden error
   def call(conn, {:error, :forbidden}) do
     conn

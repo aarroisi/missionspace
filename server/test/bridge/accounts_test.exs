@@ -104,13 +104,97 @@ defmodule Bridge.AccountsTest do
     end
 
     test "preserves docs created by user", %{workspace: workspace, user: user} do
-      doc = insert(:doc, workspace_id: workspace.id, author_id: user.id)
+      doc_folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: user.id)
+      doc = insert(:doc, workspace_id: workspace.id, author_id: user.id, doc_folder_id: doc_folder.id)
 
       {:ok, _deleted_user} = Accounts.delete_user(user)
 
       # Doc should still exist with author reference
       assert {:ok, found_doc} = Bridge.Docs.get_doc(doc.id, workspace.id)
       assert found_doc.author_id == user.id
+    end
+
+    test "removes item memberships", %{workspace: workspace, user: user} do
+      channel = insert(:channel, workspace_id: workspace.id, created_by_id: user.id)
+
+      insert(:item_member,
+        item_type: "channel",
+        item_id: channel.id,
+        user_id: user.id,
+        workspace_id: workspace.id
+      )
+
+      assert Projects.is_item_member?("channel", channel.id, user.id)
+
+      {:ok, _deleted_user} = Accounts.delete_user(user)
+
+      refute Projects.is_item_member?("channel", channel.id, user.id)
+    end
+  end
+
+  describe "update_user/2 demotion side-effects" do
+    setup do
+      workspace = insert(:workspace)
+      owner = insert(:user, workspace_id: workspace.id, role: "owner")
+
+      {:ok, workspace: workspace, owner: owner}
+    end
+
+    test "demoting owner to member forces private items to shared", %{
+      workspace: workspace,
+      owner: owner
+    } do
+      private_list = insert(:list, workspace_id: workspace.id, created_by_id: owner.id, visibility: "private")
+      private_folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: owner.id, visibility: "private")
+      private_channel = insert(:channel, workspace_id: workspace.id, created_by_id: owner.id, visibility: "private")
+      shared_list = insert(:list, workspace_id: workspace.id, created_by_id: owner.id, visibility: "shared")
+
+      {:ok, updated_user} = Accounts.update_user(owner, %{role: "member"})
+
+      assert updated_user.role == "member"
+
+      # Private items should now be shared
+      assert Bridge.Repo.get!(Bridge.Lists.List, private_list.id).visibility == "shared"
+      assert Bridge.Repo.get!(Bridge.Docs.DocFolder, private_folder.id).visibility == "shared"
+      assert Bridge.Repo.get!(Bridge.Chat.Channel, private_channel.id).visibility == "shared"
+
+      # Already shared items remain shared
+      assert Bridge.Repo.get!(Bridge.Lists.List, shared_list.id).visibility == "shared"
+    end
+
+    test "demoting owner to guest forces private items to shared", %{
+      workspace: workspace,
+      owner: owner
+    } do
+      private_list = insert(:list, workspace_id: workspace.id, created_by_id: owner.id, visibility: "private")
+
+      {:ok, updated_user} = Accounts.update_user(owner, %{role: "guest"})
+
+      assert updated_user.role == "guest"
+      assert Bridge.Repo.get!(Bridge.Lists.List, private_list.id).visibility == "shared"
+    end
+
+    test "changing member to guest does NOT force visibility change", %{workspace: workspace} do
+      member = insert(:user, workspace_id: workspace.id, role: "member")
+      list = insert(:list, workspace_id: workspace.id, created_by_id: member.id, visibility: "shared")
+
+      {:ok, updated_user} = Accounts.update_user(member, %{role: "guest"})
+
+      assert updated_user.role == "guest"
+      assert Bridge.Repo.get!(Bridge.Lists.List, list.id).visibility == "shared"
+    end
+
+    test "non-role updates do not trigger demotion side-effects", %{
+      workspace: workspace,
+      owner: owner
+    } do
+      private_list = insert(:list, workspace_id: workspace.id, created_by_id: owner.id, visibility: "private")
+
+      {:ok, updated_user} = Accounts.update_user(owner, %{name: "New Name"})
+
+      assert updated_user.name == "New Name"
+      assert updated_user.role == "owner"
+      assert Bridge.Repo.get!(Bridge.Lists.List, private_list.id).visibility == "private"
     end
   end
 

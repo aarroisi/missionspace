@@ -8,9 +8,9 @@ interface DocState {
   hasMore: boolean;
   afterCursor: string | null;
 
-  fetchDocs: (loadMore?: boolean) => Promise<void>;
+  fetchDocs: (loadMore?: boolean, docFolderId?: string) => Promise<void>;
   getDoc: (id: string) => Promise<Doc>;
-  createDoc: (title: string, content: string) => Promise<Doc>;
+  createDoc: (title: string, content: string, docFolderId: string) => Promise<Doc>;
   updateDoc: (id: string, data: Partial<Doc>) => Promise<void>;
   deleteDoc: (id: string) => Promise<void>;
   toggleDocStar: (id: string) => Promise<void>;
@@ -22,7 +22,7 @@ export const useDocStore = create<DocState>((set, get) => ({
   hasMore: true,
   afterCursor: null,
 
-  fetchDocs: async (loadMore = false) => {
+  fetchDocs: async (loadMore = false, docFolderId?: string) => {
     const { afterCursor, isLoading } = get();
 
     if (isLoading || (loadMore && !afterCursor)) return;
@@ -32,6 +32,9 @@ export const useDocStore = create<DocState>((set, get) => ({
       const params: Record<string, string> = {};
       if (loadMore && afterCursor) {
         params.after = afterCursor;
+      }
+      if (docFolderId) {
+        params.doc_folder_id = docFolderId;
       }
 
       const response = await api.get<PaginatedResponse<Doc>>("/docs", params);
@@ -63,8 +66,8 @@ export const useDocStore = create<DocState>((set, get) => ({
     }
   },
 
-  createDoc: async (title: string, content: string) => {
-    const doc = await api.post<Doc>("/docs", { title, content });
+  createDoc: async (title: string, content: string, docFolderId: string) => {
+    const doc = await api.post<Doc>("/docs", { title, content, doc_folder_id: docFolderId });
     set((state) => ({
       docs: [...(Array.isArray(state.docs) ? state.docs : []), doc],
     }));
@@ -88,7 +91,12 @@ export const useDocStore = create<DocState>((set, get) => ({
   toggleDocStar: async (id: string) => {
     const doc = get().docs.find((d) => d.id === id);
     if (doc) {
-      await get().updateDoc(id, { starred: !doc.starred });
+      set((state) => ({
+        docs: state.docs.map((d) =>
+          d.id === id ? { ...d, starred: !d.starred } : d,
+        ),
+      }));
+      await api.post("/stars/toggle", { type: "doc", id });
     }
   },
 }));

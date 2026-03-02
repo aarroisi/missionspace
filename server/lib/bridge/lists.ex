@@ -19,20 +19,49 @@ defmodule Bridge.Lists do
   # List functions
   # ============================================================================
 
-  def list_lists(workspace_id, _user, opts \\ []) do
+  def list_lists(workspace_id, user, opts \\ []) do
     List
     |> where([l], l.workspace_id == ^workspace_id)
+    |> filter_accessible_lists(user)
     |> order_by([l], desc: l.id)
     |> preload([:created_by, :statuses])
     |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
   end
 
-  def list_starred_lists(workspace_id, _user, opts \\ []) do
-    List
-    |> where([l], l.starred == true and l.workspace_id == ^workspace_id)
-    |> order_by([l], desc: l.id)
-    |> preload([:created_by, :statuses])
-    |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
+  def list_starred_lists(workspace_id, user, opts \\ []) do
+    starred_ids = Bridge.Stars.starred_ids(user.id, "board")
+
+    if MapSet.size(starred_ids) == 0 do
+      %{entries: [], metadata: %{after: nil, before: nil, limit: 50}}
+    else
+      ids = MapSet.to_list(starred_ids)
+
+      List
+      |> where([l], l.id in ^ids and l.workspace_id == ^workspace_id)
+      |> filter_accessible_lists(user)
+      |> order_by([l], desc: l.id)
+      |> preload([:created_by, :statuses])
+      |> Repo.paginate(Keyword.merge([cursor_fields: [:id], limit: 50], opts))
+    end
+  end
+
+  defp filter_accessible_lists(query, %{role: "owner", id: user_id}) do
+    # Owner sees: all shared items + own private items
+    where(query, [l], l.visibility == "shared" or l.created_by_id == ^user_id)
+  end
+
+  defp filter_accessible_lists(query, %{id: user_id}) do
+    # Non-owner sees: project items + own items + invited shared items
+    project_list_ids = Bridge.Projects.get_project_item_ids_for_user_projects(user_id, "list")
+    item_member_ids = Bridge.Projects.get_user_item_member_ids(user_id, "list")
+
+    where(
+      query,
+      [l],
+      l.id in ^project_list_ids or
+        l.created_by_id == ^user_id or
+        (l.visibility == "shared" and l.id in ^item_member_ids)
+    )
   end
 
   def get_list(id, workspace_id) do
@@ -103,7 +132,14 @@ defmodule Bridge.Lists do
       with {:ok, list} <-
              %List{}
              |> List.create_changeset(attrs)
-             |> Repo.insert() do
+             |> Repo.insert(),
+           {:ok, _prefix} <-
+             Bridge.Namespaces.reserve_prefix(
+               list.prefix,
+               "list",
+               list.id,
+               list.workspace_id
+             ) do
         Enum.each(@default_statuses, fn status_attrs ->
           %ListStatus{}
           |> ListStatus.changeset(Map.put(status_attrs, :list_id, list.id))
@@ -124,62 +160,23 @@ defmodule Bridge.Lists do
   end
 
   def delete_list(%List{} = list) do
-    Repo.delete(list)
+    result = Repo.delete(list)
+
+    case result do
+      {:ok, _} -> Bridge.Namespaces.release_prefix("list", list.id)
+      _ -> nil
+    end
+
+    result
   end
 
   def change_list(%List{} = list, attrs \\ %{}) do
     List.changeset(list, attrs)
   end
 
-  def toggle_list_starred(%List{} = list) do
-    update_list(list, %{starred: !list.starred})
-  end
 
-  def suggest_prefix(name, workspace_id) do
-    base =
-      name
-      |> String.replace(~r/[^a-zA-Z\s]/, "")
-      |> String.split(~r/\s+/, trim: true)
-      |> Enum.map(&String.first/1)
-      |> Enum.join()
-      |> String.upcase()
-
-    base =
-      cond do
-        String.length(base) >= 2 -> String.slice(base, 0, 5)
-        String.length(base) == 1 -> base <> String.upcase(String.slice(name, 1, 1) || "X")
-        true -> "XX"
-      end
-
-    find_available_prefix(base, workspace_id)
-  end
-
-  def check_prefix_available?(prefix, workspace_id) do
-    not Repo.exists?(
-      from(l in List, where: l.workspace_id == ^workspace_id and l.prefix == ^prefix)
-    )
-  end
-
-  defp find_available_prefix(base, workspace_id) do
-    max_len = min(5, String.length(base))
-
-    result =
-      Enum.find_value(2..max_len//1, fn len ->
-        candidate = String.slice(base, 0, len)
-        if check_prefix_available?(candidate, workspace_id), do: candidate
-      end)
-
-    result || add_numeric_suffix(String.slice(base, 0, 2), workspace_id)
-  end
-
-  defp add_numeric_suffix(base, workspace_id) do
-    Enum.find_value(2..999, fn n ->
-      candidate = "#{base}#{n}"
-
-      if String.length(candidate) <= 5 && check_prefix_available?(candidate, workspace_id),
-        do: candidate
-    end) || base <> "X"
-  end
+  defdelegate suggest_prefix(name, workspace_id), to: Bridge.Namespaces
+  defdelegate check_prefix_available?(prefix, workspace_id), to: Bridge.Namespaces
 
   # ============================================================================
   # List Status functions
@@ -326,7 +323,7 @@ defmodule Bridge.Lists do
   def list_tasks_by_assignee(assignee_id, workspace_id) do
     Task
     |> join(:inner, [t], l in assoc(t, :list))
-    |> where([t, l], t.assignee_id == ^assignee_id and l.workspace_id == ^workspace_id and is_nil(t.parent_id))
+    |> where([t, l], t.assignee_id == ^assignee_id and l.workspace_id == ^workspace_id and is_nil(t.parent_id) and is_nil(t.completed_at))
     |> order_by([t], desc: t.inserted_at)
     |> preload([:list, :assignee, :created_by, :status])
     |> Repo.all()
@@ -338,10 +335,31 @@ defmodule Bridge.Lists do
   def list_child_tasks_by_assignee(assignee_id, workspace_id) do
     Task
     |> join(:inner, [t], l in assoc(t, :list))
-    |> where([t, l], t.assignee_id == ^assignee_id and l.workspace_id == ^workspace_id and not is_nil(t.parent_id))
+    |> where([t, l], t.assignee_id == ^assignee_id and l.workspace_id == ^workspace_id and not is_nil(t.parent_id) and is_nil(t.completed_at))
     |> order_by([t], desc: t.inserted_at)
-    |> preload([:list, :assignee, :created_by, :parent])
+    |> preload([:list, :assignee, :created_by, :status, :parent])
     |> Repo.all()
+  end
+
+  @doc """
+  Returns all starred tasks (both parent and child) in a workspace.
+  """
+  def list_starred_tasks(workspace_id, user_id) do
+    starred_ids = Bridge.Stars.starred_ids(user_id, "task")
+
+    if MapSet.size(starred_ids) == 0 do
+      []
+    else
+      ids = MapSet.to_list(starred_ids)
+
+      Task
+      |> join(:inner, [t], l in assoc(t, :list))
+      |> where([t, l], t.id in ^ids and l.workspace_id == ^workspace_id)
+      |> order_by([t], desc: t.inserted_at)
+      |> preload([:list, :assignee, :created_by, :status, :parent])
+      |> Repo.all()
+      |> Enum.map(fn task -> %{task | starred: true} end)
+    end
   end
 
   def list_tasks_by_status_id(status_id) do
@@ -366,7 +384,7 @@ defmodule Bridge.Lists do
     Task
     |> where([t], t.parent_id == ^parent_id)
     |> order_by([t], asc: t.inserted_at)
-    |> preload([:list, :assignee, :created_by, :parent])
+    |> preload([:list, :assignee, :created_by, :status, :parent])
     |> Repo.all()
   end
 
@@ -430,10 +448,9 @@ defmodule Bridge.Lists do
 
     attrs = Map.put(attrs, "list_id", list_id)
 
-    # Child tasks don't get a status; top-level tasks default to first status
+    # Default to first status if not specified
     status_id =
       cond do
-        parent_id -> nil
         status_id -> status_id
         true -> get_first_status_id(list_id)
       end
@@ -490,6 +507,16 @@ defmodule Bridge.Lists do
   end
 
   defp get_first_status_id(_), do: nil
+
+  defp get_done_status_id(list_id) when is_binary(list_id) do
+    ListStatus
+    |> where([s], s.list_id == ^list_id and s.is_done == true)
+    |> limit(1)
+    |> select([s], s.id)
+    |> Repo.one()
+  end
+
+  defp get_done_status_id(_), do: nil
 
   defp get_max_position_by_status_id(list_id, status_id)
        when is_binary(list_id) and is_binary(status_id) do
@@ -554,23 +581,28 @@ defmodule Bridge.Lists do
 
   defp maybe_update_task_completed_at(_task, attrs), do: attrs
 
-  # For child tasks: check if is_completed is changing
+  # For child tasks: check if is_completed is changing and sync status_id
   defp maybe_update_child_task_completed_at(%Task{parent_id: parent_id} = task, attrs)
        when not is_nil(parent_id) do
     new_is_completed = attrs[:is_completed] || attrs["is_completed"]
 
     use_string_keys = Map.has_key?(attrs, "is_completed") || Map.has_key?(attrs, "title")
     completed_at_key = if use_string_keys, do: "completed_at", else: :completed_at
+    status_id_key = if use_string_keys, do: "status_id", else: :status_id
 
     cond do
       is_nil(new_is_completed) ->
         attrs
 
       new_is_completed == true && task.is_completed != true ->
-        Map.put(attrs, completed_at_key, DateTime.utc_now())
+        attrs = Map.put(attrs, completed_at_key, DateTime.utc_now())
+        done_status_id = get_done_status_id(task.list_id)
+        if done_status_id, do: Map.put(attrs, status_id_key, done_status_id), else: attrs
 
       new_is_completed == false && task.is_completed == true ->
-        Map.put(attrs, completed_at_key, nil)
+        attrs = Map.put(attrs, completed_at_key, nil)
+        first_status_id = get_first_status_id(task.list_id)
+        if first_status_id, do: Map.put(attrs, status_id_key, first_status_id), else: attrs
 
       true ->
         attrs

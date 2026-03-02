@@ -57,10 +57,18 @@ defmodule BridgeWeb.TaskController do
     conn.assigns[:task]
   end
 
+  def index(conn, %{"starred" => "true"}) do
+    workspace_id = conn.assigns.workspace_id
+    user = conn.assigns.current_user
+    tasks = Lists.list_starred_tasks(workspace_id, user.id)
+    render(conn, :index, tasks: tasks)
+  end
+
   def index(conn, %{"assigned_to_me" => "true", "is_subtask" => "true"}) do
     current_user = conn.assigns.current_user
     workspace_id = conn.assigns.workspace_id
     tasks = Lists.list_child_tasks_by_assignee(current_user.id, workspace_id)
+    tasks = Bridge.Stars.mark_starred(tasks, current_user.id, "task")
     render(conn, :index, tasks: tasks)
   end
 
@@ -68,22 +76,27 @@ defmodule BridgeWeb.TaskController do
     current_user = conn.assigns.current_user
     workspace_id = conn.assigns.workspace_id
     tasks = Lists.list_tasks_by_assignee(current_user.id, workspace_id)
+    tasks = Bridge.Stars.mark_starred(tasks, current_user.id, "task")
     render(conn, :index, tasks: tasks)
   end
 
   def index(conn, %{"parent_id" => parent_id}) when is_binary(parent_id) do
+    user = conn.assigns.current_user
     tasks = Lists.list_child_tasks(parent_id)
+    tasks = Bridge.Stars.mark_starred(tasks, user.id, "task")
     render(conn, :index, tasks: tasks)
   end
 
   def index(conn, params) do
     board_id = params["board_id"] || params["list_id"]
+    user = conn.assigns.current_user
 
     case board_id do
       id when is_binary(id) ->
         opts = BridgeWeb.PaginationHelpers.build_pagination_opts(params)
         page = Lists.list_tasks(id, opts)
-        render(conn, :index, page: page)
+        entries = Bridge.Stars.mark_starred(page.entries, user.id, "task")
+        render(conn, :index, page: %{page | entries: entries})
 
       _ ->
         render(conn, :index, tasks: [])
@@ -138,7 +151,9 @@ defmodule BridgeWeb.TaskController do
   end
 
   def show(conn, _params) do
-    render(conn, :show, task: conn.assigns.task)
+    user = conn.assigns.current_user
+    task = Bridge.Stars.mark_starred(conn.assigns.task, user.id, "task")
+    render(conn, :show, task: task)
   end
 
   def update(conn, params) do

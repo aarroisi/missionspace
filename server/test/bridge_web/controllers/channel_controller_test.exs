@@ -206,13 +206,11 @@ defmodule BridgeWeb.ChannelControllerTest do
       channel =
         insert(:channel,
           workspace_id: workspace.id,
-          name: "Old Name",
-          starred: false
+          name: "Old Name"
         )
 
       update_params = %{
-        name: "New Name",
-        starred: true
+        name: "New Name"
       }
 
       response =
@@ -221,7 +219,6 @@ defmodule BridgeWeb.ChannelControllerTest do
         |> json_response(200)
 
       assert response["data"]["name"] == "New Name"
-      assert response["data"]["starred"] == true
     end
 
     test "updated channel reflects changes in show", %{

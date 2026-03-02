@@ -8,7 +8,7 @@ defmodule Bridge.Projects.Project do
   schema "projects" do
     field(:name, :string)
     field(:description, :string)
-    field(:starred, :boolean, default: false)
+    field(:starred, :boolean, virtual: true, default: false)
     field(:start_date, :date)
     field(:end_date, :date)
 
@@ -27,7 +27,6 @@ defmodule Bridge.Projects.Project do
     |> cast(attrs, [
       :name,
       :description,
-      :starred,
       :start_date,
       :end_date,
       :workspace_id,

@@ -55,8 +55,9 @@ defmodule BridgeWeb.ListController do
 
     opts = build_pagination_opts(params)
     page = Lists.list_lists(workspace_id, user, opts)
+    entries = Bridge.Stars.mark_starred(page.entries, user.id, "board")
 
-    render(conn, :index, page: page)
+    render(conn, :index, page: %{page | entries: entries})
   end
 
   def create(conn, params) do
@@ -79,7 +80,10 @@ defmodule BridgeWeb.ListController do
   end
 
   def show(conn, _params) do
-    render(conn, :show, list: conn.assigns.list)
+    user = conn.assigns.current_user
+    list = Bridge.Stars.mark_starred(conn.assigns.list, user.id, "board")
+    tasks = Bridge.Stars.mark_starred(list.tasks, user.id, "task")
+    render(conn, :show, list: %{list | tasks: tasks})
   end
 
   def update(conn, params) do

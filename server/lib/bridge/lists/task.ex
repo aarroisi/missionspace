@@ -10,6 +10,7 @@ defmodule Bridge.Lists.Task do
     field(:sequence_number, :integer)
     field(:position, :integer, default: 0)
     field(:is_completed, :boolean, default: false)
+    field(:starred, :boolean, virtual: true, default: false)
     field(:notes, :string)
     field(:due_on, :date)
     field(:completed_at, :utc_datetime_usec)

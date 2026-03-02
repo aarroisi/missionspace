@@ -37,6 +37,7 @@ interface BoardState {
   createTask: (boardId: string, data: Partial<Task>) => Promise<Task>;
   updateTask: (id: string, data: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  toggleTaskStar: (id: string) => Promise<void>;
   reorderTask: (
     taskId: string,
     newStatusId: string,
@@ -114,7 +115,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   toggleBoardStar: async (id: string) => {
     const board = get().boards.find((b) => b.id === id);
     if (board) {
-      await get().updateBoard(id, { starred: !board.starred });
+      set((state) => ({
+        boards: state.boards.map((b) =>
+          b.id === id ? { ...b, starred: !b.starred } : b,
+        ),
+      }));
+      await api.post("/stars/toggle", { type: "board", id });
     }
   },
 
@@ -256,6 +262,27 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         },
       };
     });
+  },
+
+  toggleTaskStar: async (id: string) => {
+    // Optimistically toggle in all boards
+    set((state) => {
+      const newTasks = { ...state.tasks };
+      for (const boardId of Object.keys(newTasks)) {
+        newTasks[boardId] = newTasks[boardId].map((t) =>
+          t.id === id ? { ...t, starred: !t.starred } : t,
+        );
+      }
+      // Also toggle in child tasks
+      const newChildTasks = { ...state.childTasks };
+      for (const parentId of Object.keys(newChildTasks)) {
+        newChildTasks[parentId] = newChildTasks[parentId].map((t) =>
+          t.id === id ? { ...t, starred: !t.starred } : t,
+        );
+      }
+      return { tasks: newTasks, childTasks: newChildTasks };
+    });
+    await api.post("/stars/toggle", { type: "task", id });
   },
 
   deleteTask: async (id: string) => {

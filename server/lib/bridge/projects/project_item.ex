@@ -7,7 +7,7 @@ defmodule Bridge.Projects.ProjectItem do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @valid_item_types ["list", "doc", "channel"]
+  @valid_item_types ["list", "doc_folder", "channel"]
 
   schema "project_items" do
     field(:item_type, :string)

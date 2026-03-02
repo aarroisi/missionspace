@@ -37,11 +37,19 @@ defmodule BridgeWeb.ChannelJSON do
     %{
       id: channel.id,
       name: channel.name,
+      visibility: channel.visibility,
       starred: channel.starred,
+      created_by_id: channel.created_by_id,
+      created_by: get_created_by(channel),
       inserted_at: channel.inserted_at,
       updated_at: channel.updated_at
     }
   end
+
+  defp get_created_by(%Channel{created_by: %{id: id, name: name, email: email}}),
+    do: %{id: id, name: name, email: email}
+
+  defp get_created_by(_), do: nil
 
   defp translate_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->

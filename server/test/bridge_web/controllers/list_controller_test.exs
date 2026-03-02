@@ -216,17 +216,15 @@ defmodule BridgeWeb.ListControllerTest do
       list =
         insert(:list,
           workspace_id: workspace.id,
-          name: "Old Name",
-          starred: false
+          name: "Old Name"
         )
 
       response =
         conn
-        |> put(~p"/api/boards/#{list.id}", %{name: "New Name", starred: true})
+        |> put(~p"/api/boards/#{list.id}", %{name: "New Name"})
         |> json_response(200)
 
       assert response["data"]["name"] == "New Name"
-      assert response["data"]["starred"] == true
     end
 
     test "updated list reflects changes in show", %{

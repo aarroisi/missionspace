@@ -33,16 +33,24 @@ defmodule BridgeWeb.DirectMessageJSON do
     %{errors: translate_errors(changeset)}
   end
 
-  defp data(%DirectMessage{} = direct_message) do
+  defp data(%DirectMessage{} = dm) do
     %{
-      id: direct_message.id,
-      starred: direct_message.starred,
-      user1_id: direct_message.user1_id,
-      user2_id: direct_message.user2_id,
-      inserted_at: direct_message.inserted_at,
-      updated_at: direct_message.updated_at
+      id: dm.id,
+      starred: dm.starred,
+      user1_id: dm.user1_id,
+      user2_id: dm.user2_id,
+      user1: user_data(dm.user1),
+      user2: user_data(dm.user2),
+      inserted_at: dm.inserted_at,
+      updated_at: dm.updated_at
     }
   end
+
+  defp user_data(%Bridge.Accounts.User{} = user) do
+    %{id: user.id, name: user.name, email: user.email, avatar: user.avatar}
+  end
+
+  defp user_data(_), do: nil
 
   defp translate_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->

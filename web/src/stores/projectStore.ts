@@ -20,12 +20,12 @@ interface ProjectState {
   toggleStar: (id: string) => Promise<void>;
   addItem: (
     projectId: string,
-    itemType: "board" | "doc" | "channel",
+    itemType: "board" | "doc_folder" | "channel",
     itemId: string,
   ) => Promise<ProjectItem>;
   removeItem: (
     projectId: string,
-    itemType: "board" | "doc" | "channel",
+    itemType: "board" | "doc_folder" | "channel",
     itemId: string,
   ) => Promise<void>;
 }
@@ -99,13 +99,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   toggleStar: async (id: string) => {
     const project = get().projects.find((p) => p.id === id);
     if (project) {
-      await get().updateProject(id, { starred: !project.starred });
+      set((state) => ({
+        projects: state.projects.map((p) =>
+          p.id === id ? { ...p, starred: !p.starred } : p,
+        ),
+      }));
+      await api.post("/stars/toggle", { type: "project", id });
     }
   },
 
   addItem: async (
     projectId: string,
-    itemType: "board" | "doc" | "channel",
+    itemType: "board" | "doc_folder" | "channel",
     itemId: string,
   ) => {
     const item = await api.post<ProjectItem>(`/projects/${projectId}/items`, {
@@ -123,7 +128,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   removeItem: async (
     projectId: string,
-    itemType: "board" | "doc" | "channel",
+    itemType: "board" | "doc_folder" | "channel",
     itemId: string,
   ) => {
     await api.delete(`/projects/${projectId}/items/${itemType}:${itemId}`);

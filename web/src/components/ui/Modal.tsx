@@ -24,7 +24,7 @@ const sizeClasses: Record<ModalSize, string> = {
   xl: "max-w-xl w-full",
   "2xl": "max-w-2xl w-full",
   "3xl": "max-w-3xl w-full",
-  full: "w-[calc(100vw-2rem)] h-[calc(100vh-2rem)]",
+  full: "w-full max-w-[900px] max-h-[calc(100vh-2rem)]",
 };
 
 export function Modal({

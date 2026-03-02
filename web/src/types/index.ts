@@ -40,7 +40,7 @@ export interface Project {
 
 export interface ProjectItem {
   id: string;
-  itemType: "board" | "doc" | "channel";
+  itemType: "board" | "doc_folder" | "channel";
   itemId: string;
 }
 
@@ -58,6 +58,7 @@ export interface Board {
   id: string;
   name: string;
   prefix: string;
+  visibility: string;
   starred: boolean;
   statuses?: BoardStatus[];
   createdById: string;
@@ -84,6 +85,7 @@ export interface Task {
   position: number;
   parentId?: string | null;
   isCompleted?: boolean;
+  starred: boolean;
   assigneeId?: string | null;
   assignee?: EmbeddedUser | null;
   createdById: string;
@@ -104,11 +106,27 @@ export interface Task {
   updatedAt: string;
 }
 
+// Doc Folder types
+export interface DocFolder {
+  id: string;
+  name: string;
+  prefix: string;
+  visibility: string;
+  starred: boolean;
+  createdById: string;
+  createdBy?: EmbeddedUser | null;
+  insertedAt: string;
+  updatedAt: string;
+}
+
 // Doc types
 export interface Doc {
   id: string;
   title: string;
   content: string;
+  docFolderId: string;
+  sequenceNumber?: number;
+  key?: string;
   createdBy?: EmbeddedUser | null;
   starred: boolean;
   insertedAt: string;
@@ -119,7 +137,10 @@ export interface Doc {
 export interface Channel {
   id: string;
   name: string;
+  visibility: string;
   starred: boolean;
+  createdById: string;
+  createdBy?: EmbeddedUser | null;
   insertedAt: string;
   updatedAt: string;
 }
@@ -224,4 +245,75 @@ export interface StorageUsage {
   usedBytes: number;
   quotaBytes: number;
   availableBytes: number;
+}
+
+// Item member types
+export type ItemMemberItemType = "list" | "doc_folder" | "channel";
+
+export interface ItemMember {
+  id: string;
+  itemType: ItemMemberItemType;
+  itemId: string;
+  userId: string;
+  user?: EmbeddedUser;
+  insertedAt: string;
+}
+
+// Search types
+export interface SearchResultProject {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface SearchResultBoard {
+  id: string;
+  name: string;
+  prefix: string;
+}
+
+export interface SearchResultTask {
+  id: string;
+  title: string;
+  key?: string;
+  boardId: string;
+  parentId?: string | null;
+  status?: { name: string; color: string } | null;
+  assignee?: { id: string; name: string } | null;
+}
+
+export interface SearchResultDocFolder {
+  id: string;
+  name: string;
+  prefix: string;
+}
+
+export interface SearchResultDoc {
+  id: string;
+  title: string;
+  key?: string;
+  docFolderId: string;
+}
+
+export interface SearchResultChannel {
+  id: string;
+  name: string;
+}
+
+export interface SearchResultMember {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  role: string;
+}
+
+export interface SearchResults {
+  projects: SearchResultProject[];
+  boards: SearchResultBoard[];
+  tasks: SearchResultTask[];
+  docFolders: SearchResultDocFolder[];
+  docs: SearchResultDoc[];
+  channels: SearchResultChannel[];
+  members: SearchResultMember[];
 }

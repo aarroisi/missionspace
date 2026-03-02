@@ -7,6 +7,7 @@ import {
   Square,
   Trash2,
   Check,
+  Star,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Avatar } from "@/components/ui/Avatar";
@@ -71,6 +72,7 @@ export function TaskDetailModal({
     createChildTask,
     deleteChildTask,
     deleteTask,
+    toggleTaskStar,
   } = useBoardStore();
   const { sendMessage, fetchMessages, hasMoreMessages } = useChatStore();
   const { error: toastError } = useToastStore();
@@ -308,6 +310,16 @@ export function TaskDetailModal({
           )}
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => toggleTaskStar(task.id)}
+            className="text-dark-text-muted hover:text-yellow-400 transition-colors p-1 hover:bg-dark-surface rounded"
+            title={task.starred ? "Unstar" : "Star"}
+          >
+            <Star
+              size={18}
+              className={task.starred ? "fill-yellow-400 text-yellow-400" : ""}
+            />
+          </button>
           <button
             onClick={() => setIsDeleteTaskModalOpen(true)}
             className="text-dark-text-muted hover:text-red-400 transition-colors p-1 hover:bg-dark-surface rounded"

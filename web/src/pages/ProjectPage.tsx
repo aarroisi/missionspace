@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Kanban,
-  FileText,
+  Folder,
   Hash,
   Plus,
   MoreHorizontal,
@@ -12,20 +12,23 @@ import {
   Calendar,
   X,
   Check,
+  Users,
 } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { CreateBoardModal } from "@/components/features/CreateBoardModal";
+import { CreateDocFolderModal } from "@/components/features/CreateDocFolderModal";
 import { CreateChannelModal } from "@/components/features/CreateChannelModal";
+import { ManageMembersModal } from "@/components/features/ManageMembersModal";
 import { format } from "date-fns";
 import { useProjectStore } from "@/stores/projectStore";
 import { useBoardStore } from "@/stores/boardStore";
-import { useDocStore } from "@/stores/docStore";
+import { useDocFolderStore } from "@/stores/docFolderStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useToastStore } from "@/stores/toastStore";
-import { Board, Doc, Channel } from "@/types";
+import { Board, DocFolder, Channel } from "@/types";
 
-type ItemType = "board" | "doc" | "channel";
+type ItemType = "board" | "doc_folder" | "channel";
 
 interface AddItemMenuProps {
   onAdd: (type: ItemType) => void;
@@ -47,13 +50,13 @@ function AddItemMenu({ onAdd, onClose }: AddItemMenuProps) {
       </button>
       <button
         onClick={() => {
-          onAdd("doc");
+          onAdd("doc_folder");
           onClose();
         }}
         className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-hover text-dark-text"
       >
-        <FileText size={16} />
-        New Doc
+        <Folder size={16} />
+        New Folder
       </button>
       <button
         onClick={() => {
@@ -227,17 +230,20 @@ export function ProjectPage() {
   const [showDeleteProjectConfirm, setShowDeleteProjectConfirm] =
     useState(false);
   const [deleteItemConfirm, setDeleteItemConfirm] = useState<{
-    type: "board" | "doc" | "channel";
+    type: "board" | "doc_folder" | "channel";
     id: string;
     name: string;
   } | null>(null);
   const [removeItemConfirm, setRemoveItemConfirm] = useState<{
-    type: "board" | "doc" | "channel";
+    type: "board" | "doc_folder" | "channel";
     id: string;
     name: string;
   } | null>(null);
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
+  const [showCreateDocFolderModal, setShowCreateDocFolderModal] =
+    useState(false);
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
 
   const projects = useProjectStore((state) => state.projects);
   const updateProject = useProjectStore((state) => state.updateProject);
@@ -249,8 +255,9 @@ export function ProjectPage() {
   const createBoard = useBoardStore((state) => state.createBoard);
   const deleteBoard = useBoardStore((state) => state.deleteBoard);
 
-  const docs = useDocStore((state) => state.docs);
-  const deleteDoc = useDocStore((state) => state.deleteDoc);
+  const docFolders = useDocFolderStore((state) => state.folders);
+  const createDocFolder = useDocFolderStore((state) => state.createFolder);
+  const deleteDocFolder = useDocFolderStore((state) => state.deleteFolder);
 
   const channels = useChatStore((state) => state.channels);
   const createChannel = useChatStore((state) => state.createChannel);
@@ -268,12 +275,12 @@ export function ProjectPage() {
     return boards.filter((b) => boardIds.includes(b.id));
   }, [projectItems, boards]);
 
-  const projectDocs = useMemo(() => {
-    const docIds = projectItems
-      .filter((i) => i.itemType === "doc")
+  const projectDocFolders = useMemo(() => {
+    const folderIds = projectItems
+      .filter((i) => i.itemType === "doc_folder")
       .map((i) => i.itemId);
-    return docs.filter((d) => docIds.includes(d.id));
-  }, [projectItems, docs]);
+    return docFolders.filter((f) => folderIds.includes(f.id));
+  }, [projectItems, docFolders]);
 
   const projectChannels = useMemo(() => {
     const channelIds = projectItems
@@ -284,7 +291,7 @@ export function ProjectPage() {
 
   const hasItems =
     projectBoards.length > 0 ||
-    projectDocs.length > 0 ||
+    projectDocFolders.length > 0 ||
     projectChannels.length > 0;
 
   const handleAddItem = async (type: ItemType) => {
@@ -296,10 +303,9 @@ export function ProjectPage() {
           setShowCreateBoardModal(true);
           return;
         }
-        case "doc": {
-          // Navigate to new doc page within project context
-          navigate(`/projects/${id}/docs/new`);
-          break;
+        case "doc_folder": {
+          setShowCreateDocFolderModal(true);
+          return;
         }
         case "channel": {
           setShowCreateChannelModal(true);
@@ -377,7 +383,7 @@ export function ProjectPage() {
   };
 
   const handleRemoveFromProject = async (
-    type: "board" | "doc" | "channel",
+    type: "board" | "doc_folder" | "channel",
     itemId: string,
   ) => {
     if (!id) return;
@@ -394,7 +400,7 @@ export function ProjectPage() {
   };
 
   const handleDeleteItem = async (
-    type: "board" | "doc" | "channel",
+    type: "board" | "doc_folder" | "channel",
     itemId: string,
   ) => {
     try {
@@ -402,8 +408,8 @@ export function ProjectPage() {
         case "board":
           await deleteBoard(itemId);
           break;
-        case "doc":
-          await deleteDoc(itemId);
+        case "doc_folder":
+          await deleteDocFolder(itemId);
           break;
         case "channel":
           await deleteChannel(itemId);
@@ -430,6 +436,20 @@ export function ProjectPage() {
     }
   };
 
+  const handleCreateDocFolder = async (name: string, prefix: string) => {
+    if (!id) return;
+    try {
+      const folder = await createDocFolder(name, prefix);
+      await addItem(id, "doc_folder", folder.id);
+      success("Folder created");
+      setShowCreateDocFolderModal(false);
+      navigate(`/projects/${id}/doc-folders/${folder.id}`);
+    } catch (err) {
+      console.error("Failed to create folder:", err);
+      error("Failed to create folder");
+    }
+  };
+
   const handleCreateChannel = async (name: string) => {
     if (!id) return;
     try {
@@ -453,20 +473,21 @@ export function ProjectPage() {
   }
 
   const renderItem = (
-    item: Board | Doc | Channel,
-    type: "board" | "doc" | "channel",
+    item: Board | DocFolder | Channel,
+    type: "board" | "doc_folder" | "channel",
   ) => {
-    const name = type === "doc" ? (item as Doc).title : (item as Board).name;
+    const name = (item as Board).name || (item as any).title;
     const icon =
       type === "board" ? (
         <Kanban size={18} />
-      ) : type === "doc" ? (
-        <FileText size={18} />
+      ) : type === "doc_folder" ? (
+        <Folder size={18} />
       ) : (
         <Hash size={18} />
       );
-    // Use nested project URL
-    const path = `/projects/${id}/${type}s/${item.id}`;
+    const pathType =
+      type === "doc_folder" ? "doc-folders" : type === "board" ? "boards" : "channels";
+    const path = `/projects/${id}/${pathType}/${item.id}`;
 
     return (
       <div
@@ -581,6 +602,12 @@ export function ProjectPage() {
               </button>
             }
           >
+            <DropdownItem onClick={() => setShowMembersModal(true)}>
+              <span className="flex items-center gap-2">
+                <Users size={16} />
+                Members
+              </span>
+            </DropdownItem>
             <DropdownItem onClick={() => setShowEditModal(true)}>
               <span className="flex items-center gap-2">
                 <Pencil size={16} />
@@ -657,11 +684,11 @@ export function ProjectPage() {
                 Add Board
               </button>
               <button
-                onClick={() => handleAddItem("doc")}
+                onClick={() => handleAddItem("doc_folder")}
                 className="flex items-center gap-2 px-4 py-2 bg-dark-surface border border-dark-border hover:border-dark-hover rounded-lg text-sm text-dark-text transition-colors"
               >
-                <FileText size={16} />
-                Add Doc
+                <Folder size={16} />
+                Add Folder
               </button>
               <button
                 onClick={() => handleAddItem("channel")}
@@ -686,14 +713,16 @@ export function ProjectPage() {
               </div>
             )}
 
-            {projectDocs.length > 0 && (
+            {projectDocFolders.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-dark-text-muted uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <FileText size={14} />
-                  Docs
+                  <Folder size={14} />
+                  Folders
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {projectDocs.map((doc) => renderItem(doc, "doc"))}
+                  {projectDocFolders.map((folder) =>
+                    renderItem(folder, "doc_folder"),
+                  )}
                 </div>
               </div>
             )}
@@ -777,12 +806,29 @@ export function ProjectPage() {
         onSubmit={handleCreateBoard}
       />
 
+      {/* Create Doc Folder Modal */}
+      <CreateDocFolderModal
+        isOpen={showCreateDocFolderModal}
+        onClose={() => setShowCreateDocFolderModal(false)}
+        onSubmit={handleCreateDocFolder}
+      />
+
       {/* Create Channel Modal */}
       <CreateChannelModal
         isOpen={showCreateChannelModal}
         onClose={() => setShowCreateChannelModal(false)}
         onSubmit={handleCreateChannel}
       />
+
+      {/* Members Modal */}
+      {id && (
+        <ManageMembersModal
+          itemKind="project"
+          itemId={id}
+          isOpen={showMembersModal}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
     </div>
   );
 }
