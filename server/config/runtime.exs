@@ -20,6 +20,23 @@ if System.get_env("PHX_SERVER") do
   config :bridge, BridgeWeb.Endpoint, server: true
 end
 
+# Resend email adapter (production)
+if System.get_env("RESEND_API_KEY") do
+  config :bridge, Bridge.Mailer,
+    adapter: Swoosh.Adapters.Resend,
+    api_key: System.get_env("RESEND_API_KEY")
+
+  config :swoosh, :api_client, Swoosh.ApiClient.Req
+end
+
+if System.get_env("FROM_EMAIL") do
+  config :bridge, :from_email, System.get_env("FROM_EMAIL")
+end
+
+if System.get_env("FRONTEND_URL") do
+  config :bridge, :frontend_url, System.get_env("FRONTEND_URL")
+end
+
 config :bridge, BridgeWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 

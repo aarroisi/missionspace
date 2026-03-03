@@ -73,6 +73,18 @@ interface ChatState {
   deleteMessage: (id: string) => Promise<void>;
   addMessage: (message: Message) => void;
   hasMoreMessages: (entityType: string, entityId: string) => boolean;
+
+  // Unread state
+  unreadChannelIds: Set<string>;
+  unreadDmIds: Set<string>;
+  fetchUnreadItems: () => Promise<void>;
+  markAsRead: (itemType: string, itemId: string) => Promise<void>;
+  addUnread: (itemType: string, itemId: string) => void;
+
+  // Read position for "new messages" divider
+  lastReadAt: Record<string, string | null>;
+  fetchLastReadAt: (itemType: string, itemId: string) => Promise<void>;
+  clearLastReadAt: (itemType: string, itemId: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -330,5 +342,83 @@ export const useChatStore = create<ChatState>((set, get) => ({
         [key]: [message, ...(state.messages[key] || [])],
       },
     }));
+  },
+
+  // Unread state
+  unreadChannelIds: new Set<string>(),
+  unreadDmIds: new Set<string>(),
+
+  fetchUnreadItems: async () => {
+    try {
+      const response = await api.get<{
+        channels: string[];
+        dms: string[];
+      }>("/read-positions/unread");
+      set({
+        unreadChannelIds: new Set(response.channels),
+        unreadDmIds: new Set(response.dms),
+      });
+    } catch (error) {
+      console.error("Failed to fetch unread items:", error);
+    }
+  },
+
+  markAsRead: async (itemType: string, itemId: string) => {
+    try {
+      await api.post(`/read-positions/${itemType}/${itemId}`, {});
+      set((state) => {
+        if (itemType === "channel") {
+          const next = new Set(state.unreadChannelIds);
+          next.delete(itemId);
+          return { unreadChannelIds: next };
+        } else {
+          const next = new Set(state.unreadDmIds);
+          next.delete(itemId);
+          return { unreadDmIds: next };
+        }
+      });
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
+  },
+
+  addUnread: (itemType: string, itemId: string) => {
+    set((state) => {
+      if (itemType === "channel") {
+        const next = new Set(state.unreadChannelIds);
+        next.add(itemId);
+        return { unreadChannelIds: next };
+      } else {
+        const next = new Set(state.unreadDmIds);
+        next.add(itemId);
+        return { unreadDmIds: next };
+      }
+    });
+  },
+
+  // Read position for "new messages" divider
+  lastReadAt: {},
+
+  fetchLastReadAt: async (itemType: string, itemId: string) => {
+    try {
+      const response = await api.get<{ lastReadAt: string | null }>(
+        `/read-positions/${itemType}/${itemId}`,
+      );
+      const key = `${itemType}:${itemId}`;
+      set((state) => ({
+        lastReadAt: { ...state.lastReadAt, [key]: response.lastReadAt },
+      }));
+    } catch (error) {
+      console.error("Failed to fetch last read position:", error);
+    }
+  },
+
+  clearLastReadAt: (itemType: string, itemId: string) => {
+    const key = `${itemType}:${itemId}`;
+    set((state) => {
+      const next = { ...state.lastReadAt };
+      delete next[key];
+      return { lastReadAt: next };
+    });
   },
 }));

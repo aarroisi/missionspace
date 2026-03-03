@@ -13,7 +13,8 @@ defmodule Bridge.Factory do
       name: Faker.Person.name(),
       email: sequence(:email, &"user-#{&1}@example.com"),
       password_hash: Bridge.Accounts.User.hash_password("password123"),
-      role: "owner"
+      role: "owner",
+      email_verified_at: DateTime.utc_now()
     }
   end
 
@@ -115,10 +116,27 @@ defmodule Bridge.Factory do
   def notification_factory do
     %Bridge.Notifications.Notification{
       type: "mention",
+      item_type: "channel",
+      item_id: UUIDv7.generate(),
       entity_type: "message",
       entity_id: UUIDv7.generate(),
       context: %{},
       read: false
+    }
+  end
+
+  def subscription_factory do
+    %Bridge.Subscriptions.Subscription{
+      item_type: "task",
+      item_id: UUIDv7.generate()
+    }
+  end
+
+  def read_position_factory do
+    %Bridge.Chat.ReadPosition{
+      item_type: "channel",
+      item_id: UUIDv7.generate(),
+      last_read_at: DateTime.utc_now()
     }
   end
 

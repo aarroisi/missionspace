@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Bell, BellOff } from "lucide-react";
 import { Message } from "./Message";
 import { CommentEditor } from "./CommentEditor";
+import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { Message as MessageType } from "@/types";
 
 interface DiscussionThreadProps {
@@ -18,6 +19,49 @@ interface DiscussionThreadProps {
     attachableId: string;
     onError: (msg: string) => void;
   };
+}
+
+function ThreadHeader({ parentMessageId, onClose }: { parentMessageId: string; onClose: () => void }) {
+  const { subscriptionStatus, fetchStatus, subscribe, unsubscribe } = useSubscriptionStore();
+  const k = `thread:${parentMessageId}`;
+  const isSubscribed = subscriptionStatus[k] ?? false;
+
+  useEffect(() => {
+    fetchStatus("thread", parentMessageId);
+  }, [parentMessageId, fetchStatus]);
+
+  const handleToggle = async () => {
+    if (isSubscribed) {
+      await unsubscribe("thread", parentMessageId);
+    } else {
+      await subscribe("thread", parentMessageId);
+    }
+  };
+
+  return (
+    <div className="px-4 py-3 border-b border-dark-border flex items-center justify-between">
+      <h3 className="font-semibold text-dark-text">Thread</h3>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleToggle}
+          className={`p-1.5 rounded transition-colors ${
+            isSubscribed
+              ? "text-blue-400 hover:text-red-400 hover:bg-red-500/10"
+              : "text-dark-text-muted hover:text-blue-400 hover:bg-blue-500/10"
+          }`}
+          title={isSubscribed ? "Unsubscribe from thread" : "Subscribe to thread"}
+        >
+          {isSubscribed ? <Bell size={16} /> : <BellOff size={16} />}
+        </button>
+        <button
+          onClick={onClose}
+          className="text-dark-text-muted hover:text-dark-text transition-colors"
+        >
+          <X size={20} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function DiscussionThread({
@@ -90,15 +134,7 @@ export function DiscussionThread({
       />
 
       <div className="absolute lg:relative top-0 right-0 bottom-0 w-[calc(100%-15rem)] lg:w-[28rem] bg-dark-surface border-l border-dark-border flex flex-col z-50">
-        <div className="px-4 py-3 border-b border-dark-border flex items-center justify-between">
-          <h3 className="font-semibold text-dark-text">Thread</h3>
-          <button
-            onClick={onClose}
-            className="text-dark-text-muted hover:text-dark-text transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
+        <ThreadHeader parentMessageId={parentMessage.id} onClose={onClose} />
 
         <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
           <Message

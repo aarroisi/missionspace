@@ -1,22 +1,22 @@
 defmodule Bridge.Mentions do
   @moduledoc """
-  Helper module for extracting and processing mentions from message text.
+  Orchestrates notifications for new messages.
+  Handles subscription-based notifications, thread isolation, rollup, and @mentions.
   """
 
-  alias Bridge.Notifications
+  alias Bridge.{Notifications, Subscriptions, Repo}
 
   @doc """
-  Extracts user IDs from mentions in HTML text.
+  Extracts user IDs from mentions in markdown text.
   Mentions are in the format: <span class="mention" data-id="user-uuid">@Name</span>
 
   ## Examples
 
-      iex> extract_mention_ids("<p>Hello <span class=\"mention\" data-id=\"abc-123\">@John</span></p>")
+      iex> extract_mention_ids("<p>Hello <span class=\\"mention\\" data-id=\\"abc-123\\">@John</span></p>")
       ["abc-123"]
 
   """
   def extract_mention_ids(text) when is_binary(text) do
-    # Match data-id="..." in mention spans
     regex = ~r/data-id="([^"]+)"/
 
     regex
@@ -28,46 +28,168 @@ defmodule Bridge.Mentions do
   def extract_mention_ids(_), do: []
 
   @doc """
-  Creates notifications for all mentioned users in a message.
-  Returns a list of created notification results.
+  Main entry point: notifies subscribers and mentioned users for a new message.
+
+  Thread replies only notify thread subscribers, NOT item-level subscribers.
+  Top-level messages notify item subscribers.
+  @mentions always create a separate notification regardless of subscription status.
 
   ## Parameters
-    - message: The message struct containing the text with mentions
-    - actor_id: The ID of the user who sent the message (who did the mentioning)
-    - context: Additional context to include in the notification (e.g., channel_name, task_title)
-
-  ## Examples
-
-      iex> create_notifications_for_mentions(message, actor_id, %{channel_name: "general"})
-      [{:ok, %Notification{}}, ...]
-
+    - message: The message struct (with `parent_id`, `entity_type`, `entity_id`, `text`, `id`)
+    - actor_id: The user who sent the message
+    - workspace_id: The workspace for subscription context
   """
-  def create_notifications_for_mentions(message, actor_id, context \\ %{}) do
-    mentioned_user_ids = extract_mention_ids(message.text)
+  def notify_for_new_message(message, actor_id, workspace_id) do
+    mentioned_user_ids =
+      message.text
+      |> extract_mention_ids()
+      |> Enum.reject(&(&1 == actor_id))
 
-    # Don't notify the author if they mention themselves
-    mentioned_user_ids = Enum.reject(mentioned_user_ids, &(&1 == actor_id))
+    context = build_notification_context(message, workspace_id)
 
-    Enum.map(mentioned_user_ids, fn user_id ->
-      result =
-        Notifications.create_notification(%{
-          type: "mention",
-          entity_type: message.entity_type,
-          entity_id: message.id,
+    if message.parent_id do
+      notify_thread_reply(message, actor_id, workspace_id, mentioned_user_ids, context)
+    else
+      notify_top_level(message, actor_id, workspace_id, mentioned_user_ids, context)
+    end
+  end
+
+  # Thread reply: notify thread subscribers only, not item-level subscribers
+  defp notify_thread_reply(message, actor_id, workspace_id, mentioned_user_ids, context) do
+    # Auto-subscribe actor to the thread
+    Subscriptions.subscribe(%{
+      item_type: "thread",
+      item_id: message.parent_id,
+      user_id: actor_id,
+      workspace_id: workspace_id
+    })
+
+    # Auto-subscribe mentioned users to the thread
+    Enum.each(mentioned_user_ids, fn user_id ->
+      Subscriptions.subscribe(%{
+        item_type: "thread",
+        item_id: message.parent_id,
+        user_id: user_id,
+        workspace_id: workspace_id
+      })
+    end)
+
+    # Get thread subscriber IDs
+    subscriber_ids =
+      Subscriptions.list_subscriber_ids("thread", message.parent_id)
+      |> Enum.reject(&(&1 == actor_id))
+
+    # Upsert "thread_reply" notification for each subscriber (excluding actor)
+    Enum.each(subscriber_ids, fn user_id ->
+      {:ok, notification} =
+        Notifications.upsert_notification(%{
+          type: "thread_reply",
+          item_type: message.entity_type,
+          item_id: message.entity_id,
+          thread_id: message.parent_id,
+          latest_message_id: message.id,
           user_id: user_id,
           actor_id: actor_id,
           context: context
         })
 
-      # Broadcast to user's notification channel
-      case result do
-        {:ok, notification} ->
-          notification = Bridge.Repo.preload(notification, [:actor])
-          broadcast_notification(notification)
-          result
+      notification = Repo.preload(notification, [:actor])
+      broadcast_notification(notification)
+    end)
+
+    # Create separate "mention" notifications
+    create_mention_notifications(message, actor_id, mentioned_user_ids, context)
+  end
+
+  # Top-level message: notify item subscribers
+  defp notify_top_level(message, actor_id, workspace_id, mentioned_user_ids, context) do
+    item_type = message.entity_type
+
+    # For DMs, auto-subscribe both participants (DMs are always implicit)
+    if item_type == "dm" do
+      case Bridge.Chat.get_direct_message(message.entity_id, workspace_id) do
+        {:ok, dm} ->
+          Enum.each([dm.user1_id, dm.user2_id], fn user_id ->
+            Subscriptions.subscribe(%{
+              item_type: item_type,
+              item_id: message.entity_id,
+              user_id: user_id,
+              workspace_id: workspace_id
+            })
+          end)
 
         _ ->
-          result
+          :ok
+      end
+    else
+      # Auto-subscribe actor to the item
+      Subscriptions.subscribe(%{
+        item_type: item_type,
+        item_id: message.entity_id,
+        user_id: actor_id,
+        workspace_id: workspace_id
+      })
+    end
+
+    # Auto-subscribe mentioned users to the item
+    Enum.each(mentioned_user_ids, fn user_id ->
+      Subscriptions.subscribe(%{
+        item_type: item_type,
+        item_id: message.entity_id,
+        user_id: user_id,
+        workspace_id: workspace_id
+      })
+    end)
+
+    # Get item subscriber IDs
+    subscriber_ids =
+      Subscriptions.list_subscriber_ids(item_type, message.entity_id)
+      |> Enum.reject(&(&1 == actor_id))
+
+    # Upsert "comment" notification for each subscriber (excluding actor)
+    Enum.each(subscriber_ids, fn user_id ->
+      {:ok, notification} =
+        Notifications.upsert_notification(%{
+          type: "comment",
+          item_type: item_type,
+          item_id: message.entity_id,
+          thread_id: nil,
+          latest_message_id: message.id,
+          user_id: user_id,
+          actor_id: actor_id,
+          context: context
+        })
+
+      notification = Repo.preload(notification, [:actor])
+      broadcast_notification(notification)
+    end)
+
+    # Create separate "mention" notifications
+    create_mention_notifications(message, actor_id, mentioned_user_ids, context)
+  end
+
+  # Creates separate "mention" notifications for mentioned users
+  defp create_mention_notifications(message, actor_id, mentioned_user_ids, context) do
+    Enum.each(mentioned_user_ids, fn user_id ->
+      result =
+        Notifications.create_notification(%{
+          type: "mention",
+          item_type: message.entity_type,
+          item_id: message.entity_id,
+          thread_id: message.parent_id,
+          latest_message_id: message.id,
+          user_id: user_id,
+          actor_id: actor_id,
+          context: context
+        })
+
+      case result do
+        {:ok, notification} ->
+          notification = Repo.preload(notification, [:actor])
+          broadcast_notification(notification)
+
+        _ ->
+          :ok
       end
     end)
   end
@@ -81,8 +203,11 @@ defmodule Bridge.Mentions do
       %{
         id: notification.id,
         type: notification.type,
-        entity_type: notification.entity_type,
-        entity_id: notification.entity_id,
+        item_type: notification.item_type,
+        item_id: notification.item_id,
+        thread_id: notification.thread_id,
+        latest_message_id: notification.latest_message_id,
+        event_count: notification.event_count,
         context: notification.context,
         read: notification.read,
         user_id: notification.user_id,
@@ -98,12 +223,6 @@ defmodule Bridge.Mentions do
   @doc """
   Builds context for a notification based on the message's entity type.
   This provides information needed for navigation when the notification is clicked.
-
-  ## Examples
-
-      iex> build_notification_context(message, workspace_id)
-      %{channel_id: "...", channel_name: "general"}
-
   """
   def build_notification_context(message, workspace_id) do
     case message.entity_type do

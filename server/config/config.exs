@@ -31,6 +31,10 @@ config :bridge, BridgeWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :bridge, Bridge.Mailer, adapter: Swoosh.Adapters.Local
 
+# Email sender and frontend URL
+config :bridge, :from_email, "noreply@bridgework.com"
+config :bridge, :frontend_url, "http://localhost:5173"
+
 # Configure Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",

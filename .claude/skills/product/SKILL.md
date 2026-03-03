@@ -154,18 +154,78 @@ When a workspace member is removed:
 
 ---
 
-## Notifications
+## Notifications & Subscriptions
 
-### Mention Notifications
+### Subscription Model
 
-- Created when a user is @mentioned in a comment
-- Shows: who mentioned, where, preview of content
-- Click navigates to the specific comment
+Users subscribe to items (tasks, docs, channels, threads) to receive notifications about activity.
+
+**Auto-subscribe triggers**:
+- Creating a task, doc, or channel
+- Commenting on an item (top-level message)
+- Replying in a thread
+- Being @mentioned in an item or thread
+
+**Manual subscribe/unsubscribe**: Users can toggle subscriptions via the "Watching" section in task/doc views, channel headers, and thread panels.
+
+**Subscribable entities**:
+
+| Entity | item_type | Auto-subscribe | UI |
+|--------|-----------|----------------|----|
+| Tasks | `"task"` | Creator, commenter, mentioned | Yes |
+| Docs | `"doc"` | Creator, commenter, mentioned | Yes |
+| Channels | `"channel"` | Creator, commenter, mentioned | Yes |
+| DMs | N/A | Always implicit | No |
+| Threads | `"thread"` | Original author + repliers | Yes (in thread panel) |
+
+### Notification Types
+
+| Type | Trigger | Rollup | Recipients |
+|------|---------|--------|------------|
+| `"mention"` | @mention in comment | No (always separate) | Mentioned user |
+| `"comment"` | Top-level message on item | Yes, per item | Item subscribers (excl. author) |
+| `"thread_reply"` | Reply in a thread | Yes, per thread | Thread subscribers (excl. author) |
+
+### Rolled-up Notifications
+
+Notifications are grouped by `(user_id, type, item_type, item_id, thread_id)`. Multiple events on the same item **upsert** the existing notification:
+- User A comments on Task X -> notification: "User A commented on Task X"
+- User B comments on Task X -> **updates** same notification (event_count=2, actor=B)
+- Reading the notification marks it read. New activity after that makes it unread again.
+
+### Thread Isolation
+
+- **Top-level message** -> notifies item subscribers (rolled up per item)
+- **Thread reply** (has parent_id) -> notifies **only** thread subscribers, NOT item subscribers
+- Thread subscriptions are separate from item subscriptions
+- Auto-subscribed when you author or reply in a thread
+- Can unsubscribe from a thread independently
+
+### @mentions
+
+- Always create a separate `"mention"` notification (not rolled up with comments)
+- Always delivered regardless of subscription status
+- Auto-subscribes the mentioned user to the item/thread
+
+### Notification Display
+
+- `"mention"` -> "@mentioned you in Task X"
+- `"comment"` -> "3 new comments on Task X" (using event_count)
+- `"thread_reply"` -> "2 new replies in a thread" (using event_count)
+- Click navigates to the specific message using `latest_message_id`
+
+### Unread Indicators
+
+Channels and DMs show unread indicators (bold text + blue dot) in the sidebar:
+- Based on read positions: last time user viewed the item vs latest message timestamp
+- Updated when user navigates to a channel/DM (marks as read)
+- Real-time: new notifications for channels/DMs add to unread set
 
 ### Notification Lifecycle
 
 - Notifications are personal to the recipient
 - Deleted when user is soft-deleted
+- Subscriptions cleaned up when user is soft-deleted
 - Can be marked as read individually or all at once
 
 ---

@@ -52,6 +52,14 @@ export function InnerSidebar() {
   const dmSearchRef = useRef<HTMLInputElement>(null);
   const addItemDropdownRef = useRef<HTMLDivElement>(null);
 
+  const unreadChannelIds = useChatStore((state) => state.unreadChannelIds);
+  const unreadDmIds = useChatStore((state) => state.unreadDmIds);
+  const fetchUnreadItems = useChatStore((state) => state.fetchUnreadItems);
+
+  useEffect(() => {
+    fetchUnreadItems();
+  }, [fetchUnreadItems]);
+
   const projects = useProjectStore((state) => state.projects) || [];
 
   // Close dropdown when clicking outside
@@ -778,20 +786,27 @@ export function InnerSidebar() {
                   No channels yet
                 </p>
               )}
-              {workspaceChannels.map((channel) => (
-                <button
-                  key={channel.id}
-                  onClick={() => navigateToItem("channels", channel.id)}
-                  className={clsx(
-                    "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors",
-                    activeItemId === channel.id &&
-                      "bg-dark-surface text-blue-400",
-                  )}
-                >
-                  <Hash size={16} />
-                  <span className="truncate">{channel.name}</span>
-                </button>
-              ))}
+              {workspaceChannels.map((channel) => {
+                const isUnread = unreadChannelIds.has(channel.id);
+                return (
+                  <button
+                    key={channel.id}
+                    onClick={() => navigateToItem("channels", channel.id)}
+                    className={clsx(
+                      "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors",
+                      activeItemId === channel.id &&
+                        "bg-dark-surface text-blue-400",
+                      isUnread && activeItemId !== channel.id && "font-semibold text-dark-text",
+                    )}
+                  >
+                    <Hash size={16} />
+                    <span className="truncate flex-1">{channel.name}</span>
+                    {isUnread && activeItemId !== channel.id && (
+                      <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
@@ -842,26 +857,33 @@ export function InnerSidebar() {
               Direct Messages
             </div>
             <div className="mt-1">
-              {allDmMembers.map((member) => (
-                <button
-                  key={member.id}
-                  onClick={() => {
-                    if (member.dmId) {
-                      navigateToItem("dms", member.dmId);
-                    } else {
-                      handleStartDM(member.id);
-                    }
-                  }}
-                  className={clsx(
-                    "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors",
-                    member.dmId && activeItemId === member.dmId &&
-                      "bg-dark-surface text-blue-400",
-                  )}
-                >
-                  <Avatar name={member.name} size="xs" online={member.online} />
-                  <span className="truncate">{member.name}</span>
-                </button>
-              ))}
+              {allDmMembers.map((member) => {
+                const isUnread = member.dmId ? unreadDmIds.has(member.dmId) : false;
+                return (
+                  <button
+                    key={member.id}
+                    onClick={() => {
+                      if (member.dmId) {
+                        navigateToItem("dms", member.dmId);
+                      } else {
+                        handleStartDM(member.id);
+                      }
+                    }}
+                    className={clsx(
+                      "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-dark-surface transition-colors",
+                      member.dmId && activeItemId === member.dmId &&
+                        "bg-dark-surface text-blue-400",
+                      isUnread && activeItemId !== member.dmId && "font-semibold text-dark-text",
+                    )}
+                  >
+                    <Avatar name={member.name} size="xs" online={member.online} />
+                    <span className="truncate flex-1">{member.name}</span>
+                    {isUnread && activeItemId !== member.dmId && (
+                      <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         );

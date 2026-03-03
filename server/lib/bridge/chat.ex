@@ -6,7 +6,7 @@ defmodule Bridge.Chat do
   import Ecto.Query, warn: false
   alias Bridge.Repo
 
-  alias Bridge.Chat.{Channel, DirectMessage, Message}
+  alias Bridge.Chat.{Channel, DirectMessage, Message, ReadPosition}
 
   # ============================================================================
   # Channel functions
@@ -548,5 +548,99 @@ defmodule Bridge.Chat do
   """
   def update_message_text(%Message{} = message, text) when is_binary(text) do
     update_message(message, %{text: text})
+  end
+
+  # ============================================================================
+  # Read Position functions
+  # ============================================================================
+
+  @doc """
+  Updates (upserts) the read position for a user on an item.
+  Sets `last_read_at` to the current time.
+
+  ## Examples
+
+      iex> update_read_position("channel", channel_id, user_id)
+      {:ok, %ReadPosition{}}
+
+  """
+  def update_read_position(item_type, item_id, user_id) do
+    now = DateTime.utc_now()
+
+    %ReadPosition{}
+    |> ReadPosition.changeset(%{
+      item_type: item_type,
+      item_id: item_id,
+      user_id: user_id,
+      last_read_at: now
+    })
+    |> Repo.insert(
+      on_conflict: [set: [last_read_at: now, updated_at: now]],
+      conflict_target: [:item_type, :item_id, :user_id]
+    )
+  end
+
+  @doc """
+  Returns a list of item_ids that have unread messages for a user,
+  for a given item_type ("channel" or "dm").
+
+  Compares the user's last_read_at vs. the latest message timestamp in each entity.
+
+  ## Examples
+
+      iex> list_unread_item_ids("channel", user_id)
+      ["channel-id-1", "channel-id-3"]
+
+  """
+  def list_unread_item_ids(item_type, user_id) do
+    # Get the message entity_type that corresponds to the item_type
+    entity_type = item_type
+
+    # Subquery: latest message per entity
+    latest_messages =
+      from(m in Message,
+        where: m.entity_type == ^entity_type and is_nil(m.parent_id),
+        group_by: m.entity_id,
+        select: %{entity_id: m.entity_id, latest_at: max(m.inserted_at)}
+      )
+
+    # Join with read positions to find entities where latest message > last_read_at
+    # Also include entities with no read position (never opened)
+    from(lm in subquery(latest_messages),
+      left_join: rp in ReadPosition,
+      on:
+        rp.item_type == ^item_type and
+          rp.item_id == lm.entity_id and
+          rp.user_id == ^user_id,
+      where: is_nil(rp.id) or lm.latest_at > rp.last_read_at,
+      select: lm.entity_id
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets all read positions for a user.
+
+  ## Examples
+
+      iex> get_read_positions(user_id)
+      [%ReadPosition{}, ...]
+
+  """
+  def get_read_positions(user_id) do
+    ReadPosition
+    |> where([rp], rp.user_id == ^user_id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets the read position for a specific item and user.
+
+  Returns `nil` if no read position exists (user has never visited).
+  """
+  def get_read_position(item_type, item_id, user_id) do
+    ReadPosition
+    |> where([rp], rp.item_type == ^item_type and rp.item_id == ^item_id and rp.user_id == ^user_id)
+    |> Repo.one()
   end
 end

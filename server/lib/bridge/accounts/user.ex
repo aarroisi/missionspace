@@ -15,6 +15,10 @@ defmodule Bridge.Accounts.User do
     field(:role, :string, default: "owner")
     field(:is_active, :boolean, default: true)
     field(:deleted_at, :utc_datetime_usec)
+    field(:email_verified_at, :utc_datetime_usec)
+    field(:email_verification_token, :string)
+    field(:password_reset_token, :string)
+    field(:password_reset_expires_at, :utc_datetime_usec)
 
     belongs_to(:workspace, Bridge.Accounts.Workspace)
     has_many(:project_members, Bridge.Projects.ProjectMember)
@@ -53,6 +57,29 @@ defmodule Bridge.Accounts.User do
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:email)
     |> put_password_hash()
+    |> put_change(:email_verification_token, generate_token())
+  end
+
+  def password_reset_changeset(user) do
+    user
+    |> change(%{
+      password_reset_token: generate_token(),
+      password_reset_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+    })
+  end
+
+  def reset_password_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:password])
+    |> validate_required([:password])
+    |> validate_length(:password, min: 6)
+    |> put_password_hash()
+    |> put_change(:password_reset_token, nil)
+    |> put_change(:password_reset_expires_at, nil)
+  end
+
+  defp generate_token do
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
   end
 
   defp put_password_hash(changeset) do

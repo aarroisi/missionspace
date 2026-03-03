@@ -1,5 +1,6 @@
 import { useChannel } from "./useChannel";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
 import { Notification } from "@/types";
 
@@ -10,6 +11,7 @@ import { Notification } from "@/types";
 export function useNotificationChannel() {
   const { user } = useAuthStore();
   const { addNotification } = useNotificationStore();
+  const { addUnread } = useChatStore();
 
   const topic = user ? `notifications:${user.id}` : "";
 
@@ -19,6 +21,11 @@ export function useNotificationChannel() {
       const notification: Notification = {
         id: payload.id,
         type: payload.type,
+        itemType: payload.item_type,
+        itemId: payload.item_id,
+        threadId: payload.thread_id,
+        latestMessageId: payload.latest_message_id,
+        eventCount: payload.event_count,
         entityType: payload.entity_type,
         entityId: payload.entity_id,
         context: payload.context,
@@ -31,6 +38,13 @@ export function useNotificationChannel() {
         updatedAt: payload.updated_at,
       };
       addNotification(notification);
+
+      // Update unread indicators for channels/DMs
+      const itemType = payload.item_type;
+      const itemId = payload.item_id;
+      if (itemType === "channel" || itemType === "dm") {
+        addUnread(itemType, itemId);
+      }
     }
   });
 }

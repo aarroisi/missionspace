@@ -13,6 +13,9 @@ import { GeneralSettingsPage } from "./pages/GeneralSettingsPage";
 import { WorkspaceMembersPage } from "./pages/WorkspaceMembersPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { LoginPage } from "./pages/LoginPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { ToastContainer } from "./components/ui/Toast";
 import { MemberProfileProvider } from "./contexts/MemberProfileContext";
 import { useAuthStore } from "./stores/authStore";
@@ -26,7 +29,7 @@ import { SearchModal } from "./components/features/SearchModal";
 import { useSearchStore } from "./stores/searchStore";
 
 function App() {
-  const { checkAuth, fetchMembers, isAuthenticated, isLoading } =
+  const { checkAuth, fetchMembers, isAuthenticated, isLoading, needsEmailVerification } =
     useAuthStore();
   const { fetchProjects } = useProjectStore();
   const { fetchBoards } = useBoardStore();
@@ -90,6 +93,19 @@ function App() {
     );
   }
 
+  // Show verify email page if user has session but email not verified
+  if (needsEmailVerification) {
+    return (
+      <>
+        <Routes>
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="*" element={<Navigate to="/verify-email" replace />} />
+        </Routes>
+        <ToastContainer />
+      </>
+    );
+  }
+
   // Show auth pages without layout
   if (!isAuthenticated) {
     return (
@@ -97,6 +113,9 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <ToastContainer />

@@ -28,6 +28,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useAuthStore } from "@/stores/authStore";
+import { SubscriptionSection } from "@/components/features/SubscriptionSection";
 import { Message as MessageType } from "@/types";
 
 export function DocView() {
@@ -813,6 +814,12 @@ export function DocView() {
               />
             )}
           </div>
+
+          {!isEditing && docId && !isNewDoc && (
+            <div className="px-8 py-4 border-t border-dark-border">
+              <SubscriptionSection itemType="doc" itemId={docId} />
+            </div>
+          )}
 
           {!isEditing && (
             <div className={`px-8 py-6 border-t border-dark-border w-full${topLevelComments.length === 0 ? " flex-1 flex flex-col justify-center" : ""}`}>

@@ -24,6 +24,11 @@ cd server && mix test           cd web && npx playwright test
    - **Update** the spec if it's a new decision
    - **Debate** if it conflicts with existing spec - don't silently override
    - This keeps decisions aligned and auditable
+8. **Feature Specs**: Every new feature must have a specification file in `.claude/features/`. When implementing a new feature:
+   - Create a markdown file named after the feature (e.g., `.claude/features/search.md`, `.claude/features/subscriptions.md`)
+   - Document: what it does, how it works, key decisions, entity relationships, and UI behavior
+   - Update the spec as the feature evolves — changes are tracked in git alongside the code
+   - This makes it easy to generate product docs later
 
 ## Documentation
 

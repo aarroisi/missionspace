@@ -180,6 +180,9 @@ defmodule Bridge.Accounts do
       # Remove notifications (both as recipient and actor)
       Notifications.delete_all_for_user(user.id)
 
+      # Remove subscriptions
+      Bridge.Subscriptions.delete_all_for_user(user.id)
+
       # Scrub email and soft-delete user
       scrubbed_email = "deleted_#{user.id}@deleted.local"
 
@@ -281,34 +284,45 @@ defmodule Bridge.Accounts do
   Returns {:ok, %{workspace: workspace, user: user}} or {:error, changeset}
   """
   def register_workspace_and_user(workspace_name, user_name, email, password) do
-    Repo.transaction(fn ->
-      # Create workspace
-      workspace_attrs = %{name: workspace_name, slug: slugify(workspace_name)}
+    result =
+      Repo.transaction(fn ->
+        # Create workspace
+        workspace_attrs = %{name: workspace_name, slug: slugify(workspace_name)}
 
-      case create_workspace(workspace_attrs) do
-        {:ok, workspace} ->
-          # Create first user
-          user_attrs = %{
-            name: user_name,
-            email: email,
-            password: password,
-            workspace_id: workspace.id
-          }
+        case create_workspace(workspace_attrs) do
+          {:ok, workspace} ->
+            # Create first user
+            user_attrs = %{
+              name: user_name,
+              email: email,
+              password: password,
+              workspace_id: workspace.id
+            }
 
-          case %User{}
-               |> User.registration_changeset(user_attrs)
-               |> Repo.insert() do
-            {:ok, user} ->
-              %{workspace: workspace, user: user}
+            case %User{}
+                 |> User.registration_changeset(user_attrs)
+                 |> Repo.insert() do
+              {:ok, user} ->
+                %{workspace: workspace, user: user}
 
-            {:error, changeset} ->
-              Repo.rollback(changeset)
-          end
+              {:error, changeset} ->
+                Repo.rollback(changeset)
+            end
 
-        {:error, changeset} ->
-          Repo.rollback(changeset)
-      end
-    end)
+          {:error, changeset} ->
+            Repo.rollback(changeset)
+        end
+      end)
+
+    # Send verification email after successful registration
+    case result do
+      {:ok, %{user: user}} ->
+        Bridge.Emails.verification_email(user) |> Bridge.Mailer.deliver()
+        result
+
+      _ ->
+        result
+    end
   end
 
   @doc """
@@ -327,6 +341,77 @@ defmodule Bridge.Accounts do
       {:ok, user}
     else
       {:error, :invalid_credentials}
+    end
+  end
+
+  # Email verification
+
+  def verify_email(token) when is_binary(token) do
+    case Repo.get_by(User, email_verification_token: token) do
+      nil ->
+        {:error, :invalid_token}
+
+      user ->
+        user
+        |> Ecto.Changeset.change(%{
+          email_verified_at: DateTime.utc_now(),
+          email_verification_token: nil
+        })
+        |> Repo.update()
+    end
+  end
+
+  def resend_verification_email(%User{} = user) do
+    token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+
+    case user
+         |> Ecto.Changeset.change(%{email_verification_token: token})
+         |> Repo.update() do
+      {:ok, updated_user} ->
+        Bridge.Emails.verification_email(updated_user) |> Bridge.Mailer.deliver()
+        {:ok, updated_user}
+
+      error ->
+        error
+    end
+  end
+
+  # Password reset
+
+  def request_password_reset(email) when is_binary(email) do
+    case get_user_by_email(email) do
+      nil ->
+        # Don't reveal whether email exists
+        :ok
+
+      user ->
+        changeset = User.password_reset_changeset(user)
+
+        case Repo.update(changeset) do
+          {:ok, updated_user} ->
+            Bridge.Emails.password_reset_email(updated_user) |> Bridge.Mailer.deliver()
+            :ok
+
+          _ ->
+            :ok
+        end
+    end
+  end
+
+  def reset_password(token, new_password) when is_binary(token) do
+    case Repo.get_by(User, password_reset_token: token) do
+      nil ->
+        {:error, :invalid_token}
+
+      user ->
+        if user.password_reset_expires_at &&
+             DateTime.compare(DateTime.utc_now(), user.password_reset_expires_at) == :lt do
+          user
+          |> User.reset_password_changeset(%{password: new_password})
+          |> Repo.update()
+        else
+          {:error, :token_expired}
+        end
     end
   end
 

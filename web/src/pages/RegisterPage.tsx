@@ -47,17 +47,16 @@ export function RegisterPage() {
         throw new Error(data.error || "Registration failed");
       }
 
-      // Update auth store
+      // Set session but don't mark as authenticated yet (email not verified)
       useAuthStore.setState({
         user: data.user,
-        isAuthenticated: true,
         isLoading: false,
       });
 
-      success("Workspace created successfully!");
+      success("Workspace created! Please check your email to verify your account.");
 
-      // Navigate to home
-      navigate("/");
+      // Navigate to verify email page
+      navigate("/verify-email");
     } catch (err) {
       const errorMessage = (err as Error).message;
       setError(errorMessage);

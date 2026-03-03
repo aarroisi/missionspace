@@ -88,6 +88,14 @@ defmodule BridgeWeb.DocController do
       |> Map.put("workspace_id", workspace_id)
 
     with {:ok, doc} <- Docs.create_doc(doc_params) do
+      # Auto-subscribe creator to the doc
+      Bridge.Subscriptions.subscribe(%{
+        item_type: "doc",
+        item_id: doc.id,
+        user_id: current_user.id,
+        workspace_id: workspace_id
+      })
+
       conn
       |> put_status(:created)
       |> render(:show, doc: doc)
@@ -122,8 +130,8 @@ defmodule BridgeWeb.DocController do
             if user_id != current_user.id do
               case Bridge.Notifications.create_notification(%{
                      type: "mention",
-                     entity_type: "doc",
-                     entity_id: updated_doc.id,
+                     item_type: "doc",
+                     item_id: updated_doc.id,
                      user_id: user_id,
                      actor_id: current_user.id,
                      context: %{docId: updated_doc.id, docTitle: updated_doc.title}

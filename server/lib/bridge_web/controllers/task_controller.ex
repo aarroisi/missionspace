@@ -105,6 +105,7 @@ defmodule BridgeWeb.TaskController do
 
   def create(conn, params) do
     current_user = conn.assigns.current_user
+    workspace_id = conn.assigns.workspace_id
 
     # Accept both boardId and listId, convert to list_id for internal use
     task_params =
@@ -114,6 +115,14 @@ defmodule BridgeWeb.TaskController do
       |> normalize_parent_id()
 
     with {:ok, task} <- Lists.create_task(task_params) do
+      # Auto-subscribe creator to the task
+      Bridge.Subscriptions.subscribe(%{
+        item_type: "task",
+        item_id: task.id,
+        user_id: current_user.id,
+        workspace_id: workspace_id
+      })
+
       conn
       |> put_status(:created)
       |> render(:show, task: task)

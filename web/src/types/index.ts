@@ -203,11 +203,19 @@ export interface ActiveItem {
 }
 
 // Notification types
+export type NotificationType = "mention" | "comment" | "thread_reply";
+export type SubscriptionItemType = "task" | "doc" | "channel" | "thread";
+
 export interface Notification {
   id: string;
-  type: "mention";
-  entityType: "message" | "doc" | "task";
-  entityId: string;
+  type: NotificationType;
+  itemType: string;
+  itemId: string;
+  threadId?: string | null;
+  latestMessageId?: string | null;
+  eventCount: number;
+  entityType?: string;
+  entityId?: string;
   context: Record<string, unknown>;
   read: boolean;
   userId: string;
@@ -216,6 +224,20 @@ export interface Notification {
   actorAvatar?: string;
   insertedAt: string;
   updatedAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  itemType: SubscriptionItemType;
+  itemId: string;
+  userId: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+  };
+  insertedAt: string;
 }
 
 // Asset types

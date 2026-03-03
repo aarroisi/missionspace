@@ -16,6 +16,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useChannel } from "@/hooks/useChannel";
+import { SubscriptionSection } from "@/components/features/SubscriptionSection";
 import { Message as MessageType } from "@/types";
 
 export function ChatView() {
@@ -37,6 +38,10 @@ export function ChatView() {
     deleteChannel,
     updateChannel,
     toggleChannelStar,
+    markAsRead,
+    lastReadAt,
+    fetchLastReadAt,
+    clearLastReadAt,
   } = useChatStore();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -87,8 +92,17 @@ export function ChatView() {
   useEffect(() => {
     if (entityId) {
       fetchMessages(entityType, entityId);
+      // Fetch last read position BEFORE marking as read, so we know where to show the divider
+      fetchLastReadAt(entityType, entityId).then(() => {
+        markAsRead(entityType, entityId);
+      });
     }
-  }, [entityId, entityType, fetchMessages]);
+    return () => {
+      if (entityId) {
+        clearLastReadAt(entityType, entityId);
+      }
+    };
+  }, [entityId, entityType, fetchMessages, fetchLastReadAt, markAsRead, clearLastReadAt]);
 
   const handleSendMessage = async (text: string, quoteId?: string) => {
     if (!entityId) return;
@@ -225,6 +239,10 @@ export function ChatView() {
               # {item.name}
             </h1>
           )}
+          <div className="flex items-center gap-3">
+            {entityType === "channel" && entityId && (
+              <SubscriptionSection itemType="channel" itemId={entityId} />
+            )}
           {entityType === "channel" && !isRenaming && (
             <Dropdown
               align="right"
@@ -272,6 +290,7 @@ export function ChatView() {
               </DropdownItem>
             </Dropdown>
           )}
+          </div>
         </div>
 
         <DiscussionView
@@ -289,6 +308,7 @@ export function ChatView() {
           onLoadMore={handleLoadMore}
           isLoadingMore={isLoadingMore}
           highlightCommentId={highlightCommentId}
+          lastReadAt={entityId ? lastReadAt[`${entityType}:${entityId}`] : undefined}
           fileUpload={entityId ? {
             attachableType: entityType,
             attachableId: entityId,

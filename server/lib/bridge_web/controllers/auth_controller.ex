@@ -42,23 +42,32 @@ defmodule BridgeWeb.AuthController do
   def login(conn, %{"email" => email, "password" => password}) do
     case Accounts.authenticate_user(email, password) do
       {:ok, user} ->
-        conn
+        # Set session so resend-verification works
+        conn = conn
         |> put_session(:user_id, user.id)
         |> put_session(:workspace_id, user.workspace_id)
-        |> json(%{
-          user: %{
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            workspace_id: user.workspace_id
-          },
-          workspace: %{
-            id: user.workspace.id,
-            name: user.workspace.name,
-            slug: user.workspace.slug
-          }
-        })
+
+        if is_nil(user.email_verified_at) do
+          conn
+          |> put_status(:forbidden)
+          |> json(%{error: "email_not_verified"})
+        else
+          conn
+          |> json(%{
+            user: %{
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              workspace_id: user.workspace_id
+            },
+            workspace: %{
+              id: user.workspace.id,
+              name: user.workspace.name,
+              slug: user.workspace.slug
+            }
+          })
+        end
 
       {:error, :invalid_credentials} ->
         conn
@@ -85,20 +94,26 @@ defmodule BridgeWeb.AuthController do
           {:ok, user} ->
             user = Bridge.Repo.preload(user, :workspace)
 
-            json(conn, %{
-              user: %{
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                workspace_id: user.workspace_id
-              },
-              workspace: %{
-                id: user.workspace.id,
-                name: user.workspace.name,
-                slug: user.workspace.slug
-              }
-            })
+            if is_nil(user.email_verified_at) do
+              conn
+              |> put_status(:forbidden)
+              |> json(%{error: "email_not_verified"})
+            else
+              json(conn, %{
+                user: %{
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  role: user.role,
+                  workspace_id: user.workspace_id
+                },
+                workspace: %{
+                  id: user.workspace.id,
+                  name: user.workspace.name,
+                  slug: user.workspace.slug
+                }
+              })
+            end
 
           {:error, :not_found} ->
             conn
@@ -138,6 +153,64 @@ defmodule BridgeWeb.AuthController do
         conn
         |> put_status(:unprocessable_entity)
         |> json(%{errors: translate_errors(changeset)})
+    end
+  end
+
+  def verify_email(conn, %{"token" => token}) do
+    case Accounts.verify_email(token) do
+      {:ok, _user} ->
+        json(conn, %{message: "Email verified successfully"})
+
+      {:error, :invalid_token} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Invalid or expired verification token"})
+    end
+  end
+
+  def forgot_password(conn, %{"email" => email}) do
+    Accounts.request_password_reset(email)
+    # Always return success to prevent email enumeration
+    json(conn, %{message: "If an account exists with that email, we sent a password reset link"})
+  end
+
+  def reset_password(conn, %{"token" => token, "password" => password}) do
+    case Accounts.reset_password(token, password) do
+      {:ok, _user} ->
+        json(conn, %{message: "Password reset successfully"})
+
+      {:error, :invalid_token} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Invalid reset token"})
+
+      {:error, :token_expired} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Reset token has expired"})
+
+      {:error, changeset} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{errors: translate_errors(changeset)})
+    end
+  end
+
+  def resend_verification(conn, _params) do
+    current_user = conn.assigns.current_user
+
+    if current_user.email_verified_at do
+      json(conn, %{message: "Email already verified"})
+    else
+      case Accounts.resend_verification_email(current_user) do
+        {:ok, _user} ->
+          json(conn, %{message: "Verification email sent"})
+
+        {:error, _} ->
+          conn
+          |> put_status(:internal_server_error)
+          |> json(%{error: "Failed to send verification email"})
+      end
     end
   end
 

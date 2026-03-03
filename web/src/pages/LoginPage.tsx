@@ -27,6 +27,11 @@ export function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.error === "email_not_verified") {
+          // Session is set server-side, redirect to verify page
+          navigate("/verify-email");
+          return;
+        }
         throw new Error(data.error || "Login failed");
       }
 
@@ -101,6 +106,16 @@ export function LoginPage() {
               required
               className="w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-dark-text placeholder:text-dark-text-muted focus:outline-none focus:border-blue-500"
             />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => navigate("/forgot-password")}
+              className="text-sm text-dark-text-muted hover:text-blue-400 transition-colors"
+            >
+              Forgot password?
+            </button>
           </div>
 
           <button

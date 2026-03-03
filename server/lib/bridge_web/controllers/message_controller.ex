@@ -134,10 +134,9 @@ defmodule BridgeWeb.MessageController do
       # Preload associations
       message = Bridge.Repo.preload(message, [:user, :parent, quote: [:user]])
 
-      # Create notifications for mentioned users (async, don't block response)
+      # Create notifications for subscribers and mentioned users (async, don't block response)
       Task.start(fn ->
-        context = Mentions.build_notification_context(message, workspace_id)
-        Mentions.create_notifications_for_mentions(message, current_user.id, context)
+        Mentions.notify_for_new_message(message, current_user.id, workspace_id)
       end)
 
       conn

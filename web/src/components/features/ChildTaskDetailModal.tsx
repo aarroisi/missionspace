@@ -23,6 +23,7 @@ import {
 import { useBoardStore } from "@/stores/boardStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useToastStore } from "@/stores/toastStore";
+import { SubscriptionSection } from "./SubscriptionSection";
 import { clsx } from "clsx";
 
 interface ChildTaskDetailModalProps {
@@ -411,6 +412,14 @@ export function ChildTaskDetailModal({
                   }}
                 />
               </div>
+            </div>
+
+            {/* Subscribers Row */}
+            <div className="flex items-center gap-6">
+              <label className="w-24 flex-shrink-0 text-sm font-medium text-dark-text text-right">
+                Watching
+              </label>
+              <SubscriptionSection itemType="task" itemId={task.id} />
             </div>
           </div>
 

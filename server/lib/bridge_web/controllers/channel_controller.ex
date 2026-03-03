@@ -70,6 +70,14 @@ defmodule BridgeWeb.ChannelController do
       |> Map.put("created_by_id", user.id)
 
     with {:ok, channel} <- Chat.create_channel(channel_params) do
+      # Auto-subscribe creator to the channel
+      Bridge.Subscriptions.subscribe(%{
+        item_type: "channel",
+        item_id: channel.id,
+        user_id: user.id,
+        workspace_id: workspace_id
+      })
+
       conn
       |> put_status(:created)
       |> render(:show, channel: channel)

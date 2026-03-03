@@ -18,6 +18,9 @@ defmodule BridgeWeb.Router do
     post("/auth/login", AuthController, :login)
     post("/auth/logout", AuthController, :logout)
     get("/auth/me", AuthController, :me)
+    post("/auth/verify-email", AuthController, :verify_email)
+    post("/auth/forgot-password", AuthController, :forgot_password)
+    post("/auth/reset-password", AuthController, :reset_password)
   end
 
   scope "/api", BridgeWeb do
@@ -25,6 +28,7 @@ defmodule BridgeWeb.Router do
 
     # Auth routes (authentication required)
     put("/auth/me", AuthController, :update_me)
+    post("/auth/resend-verification", AuthController, :resend_verification)
 
     # Workspace settings (owner only)
     put("/workspace", WorkspaceController, :update)
@@ -78,6 +82,17 @@ defmodule BridgeWeb.Router do
     patch("/notifications/:id/read", NotificationController, :mark_as_read)
     post("/notifications/read-all", NotificationController, :mark_all_as_read)
     get("/notifications/unread-count", NotificationController, :unread_count)
+
+    # Subscription routes
+    get("/subscriptions/:item_type/:item_id", SubscriptionController, :index)
+    get("/subscriptions/:item_type/:item_id/status", SubscriptionController, :status)
+    post("/subscriptions/:item_type/:item_id", SubscriptionController, :create)
+    delete("/subscriptions/:item_type/:item_id", SubscriptionController, :delete)
+
+    # Read position routes (unread indicators)
+    get("/read-positions/unread", ReadPositionController, :unread)
+    get("/read-positions/:item_type/:item_id", ReadPositionController, :show)
+    post("/read-positions/:item_type/:item_id", ReadPositionController, :create)
 
     # Asset routes
     post("/assets/request-upload", AssetController, :request_upload)

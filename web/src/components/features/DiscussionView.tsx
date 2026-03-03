@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Quote, ArrowDown } from "lucide-react";
 import { Message } from "./Message";
 import { CommentEditor } from "./CommentEditor";
@@ -23,6 +24,7 @@ interface DiscussionViewProps {
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
   highlightCommentId?: string | null;
+  lastReadAt?: string | null;
   fileUpload?: {
     attachableType: string;
     attachableId: string;
@@ -45,6 +47,7 @@ export function DiscussionView({
   onLoadMore,
   isLoadingMore = false,
   highlightCommentId,
+  lastReadAt,
   fileUpload,
 }: DiscussionViewProps) {
   const [_internalOpenThread, _setInternalOpenThread] =
@@ -61,13 +64,25 @@ export function DiscussionView({
   const topLevelMessages = messages.filter((m) => !m.parentId);
   const threadMessages = messages.filter((m) => m.parentId);
 
-  // Scroll to bottom on initial load
+  // Find index of first unread message for the "new messages" divider
+  const newMessagesDividerRef = useRef<HTMLDivElement>(null);
+  const firstUnreadIndex = (() => {
+    if (!lastReadAt) return -1;
+    const readTime = new Date(lastReadAt).getTime();
+    return topLevelMessages.findIndex(
+      (m) => new Date(m.insertedAt).getTime() > readTime,
+    );
+  })();
+
+  // Scroll to divider or bottom on initial load
   const hasScrolledRef = useRef(false);
   useEffect(() => {
     if (topLevelMessages.length > 0 && !hasScrolledRef.current) {
       hasScrolledRef.current = true;
       setTimeout(() => {
-        if (scrollContainerRef.current) {
+        if (newMessagesDividerRef.current) {
+          newMessagesDividerRef.current.scrollIntoView({ block: "center" });
+        } else if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop =
             scrollContainerRef.current.scrollHeight;
         }
@@ -76,8 +91,12 @@ export function DiscussionView({
   }, [topLevelMessages.length]);
 
   // Scroll to and highlight comment if highlightCommentId is provided
+  const [, setSearchParams] = useSearchParams();
+  const highlightedRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (highlightCommentId && messages.length > 0) {
+    if (highlightCommentId && messages.length > 0 && highlightedRef.current !== highlightCommentId) {
+      highlightedRef.current = highlightCommentId;
       // Small delay to ensure the DOM is rendered
       setTimeout(() => {
         const messageElement = document.getElementById(
@@ -101,9 +120,15 @@ export function DiscussionView({
             );
           }, 3000);
         }
+        // Clear the comment param from the URL so it doesn't re-trigger
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("comment");
+          return next;
+        }, { replace: true });
       }, 300);
     }
-  }, [highlightCommentId, messages.length]);
+  }, [highlightCommentId, messages.length, setSearchParams]);
 
   const getThreadReplies = (messageId: string) => {
     return threadMessages.filter((m) => m.parentId === messageId);
@@ -192,26 +217,41 @@ export function DiscussionView({
           )}
           {topLevelMessages.length > 0 ? (
             <div className="space-y-1">
-              {topLevelMessages.map((message) => {
+              {topLevelMessages.map((message, index) => {
                 const replies = getThreadReplies(message.id);
+                const showDivider = index === firstUnreadIndex && index > 0;
                 return (
-                  <div key={message.id} id={`message-${message.id}`}>
-                    <Message
-                      message={message}
-                      onReply={() => setOpenThread(message)}
-                      onQuote={() => handleQuote(message)}
-                      onQuotedClick={handleQuotedClick}
-                      fileUpload={fileUpload}
-                    />
-                    {replies.length > 0 && (
-                      <button
-                        onClick={() => setOpenThread(message)}
-                        className="ml-14 text-xs text-blue-400 hover:underline"
+                  <div key={message.id}>
+                    {showDivider && (
+                      <div
+                        ref={newMessagesDividerRef}
+                        className="flex items-center gap-3 my-3"
                       >
-                        {replies.length}{" "}
-                        {replies.length === 1 ? "reply" : "replies"}
-                      </button>
+                        <div className="flex-1 h-px bg-red-500/40" />
+                        <span className="text-xs text-red-400 font-medium whitespace-nowrap">
+                          New messages
+                        </span>
+                        <div className="flex-1 h-px bg-red-500/40" />
+                      </div>
                     )}
+                    <div id={`message-${message.id}`}>
+                      <Message
+                        message={message}
+                        onReply={() => setOpenThread(message)}
+                        onQuote={() => handleQuote(message)}
+                        onQuotedClick={handleQuotedClick}
+                        fileUpload={fileUpload}
+                      />
+                      {replies.length > 0 && (
+                        <button
+                          onClick={() => setOpenThread(message)}
+                          className="ml-14 text-xs text-blue-400 hover:underline"
+                        >
+                          {replies.length}{" "}
+                          {replies.length === 1 ? "reply" : "replies"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -232,19 +272,16 @@ export function DiscussionView({
         </div>
       </div>
 
-      {/* Jump to bottom button */}
-      {showJumpToBottom && showJumpButton && (
-        <button
-          onClick={handleJumpToBottom}
-          className="absolute right-8 p-3 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all z-10"
-          style={{ bottom: quotingMessage ? "200px" : "140px" }}
-          title="Jump to bottom"
-        >
-          <ArrowDown size={20} />
-        </button>
-      )}
-
-      <div className="border-t border-dark-border bg-dark-bg p-4 max-w-7xl mx-auto w-full">
+      <div className="relative border-t border-dark-border bg-dark-bg p-4 max-w-7xl mx-auto w-full">
+        {showJumpToBottom && showJumpButton && (
+          <button
+            onClick={handleJumpToBottom}
+            className="absolute -top-12 right-4 p-2 rounded-full bg-dark-surface border border-dark-border text-dark-text-muted shadow-md hover:text-dark-text hover:bg-dark-hover transition-all z-10"
+            title="Jump to bottom"
+          >
+            <ArrowDown size={16} />
+          </button>
+        )}
         <CommentEditor
           value={newComment}
           onChange={setNewComment}

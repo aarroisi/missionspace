@@ -22,6 +22,14 @@ defmodule BridgeWeb.Plugs.AuthPlug do
               |> json(%{error: "Account has been deactivated"})
               |> halt()
 
+            # Check if email is verified (allow resend-verification endpoint)
+            is_nil(user.email_verified_at) and
+                conn.request_path != "/api/auth/resend-verification" ->
+              conn
+              |> put_status(:forbidden)
+              |> json(%{error: "email_not_verified"})
+              |> halt()
+
             # Check if user has a workspace
             is_nil(user.workspace_id) ->
               conn

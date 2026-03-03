@@ -27,6 +27,7 @@ interface AuthState {
   members: WorkspaceMember[];
   isAuthenticated: boolean;
   isLoading: boolean;
+  needsEmailVerification: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -49,6 +50,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   members: [],
   isAuthenticated: false,
   isLoading: true,
+  needsEmailVerification: false,
 
   login: async (email: string, password: string) => {
     try {
@@ -96,13 +98,33 @@ export const useAuthStore = create<AuthState>((set) => ({
           workspace: data.workspace,
           isAuthenticated: true,
           isLoading: false,
+          needsEmailVerification: false,
         });
+      } else if (response.status === 403) {
+        const data = await response.json();
+        if (data.error === "email_not_verified") {
+          set({
+            isAuthenticated: false,
+            needsEmailVerification: true,
+            isLoading: false,
+          });
+        } else {
+          set({
+            user: null,
+            workspace: null,
+            members: [],
+            isAuthenticated: false,
+            needsEmailVerification: false,
+            isLoading: false,
+          });
+        }
       } else {
         set({
           user: null,
           workspace: null,
           members: [],
           isAuthenticated: false,
+          needsEmailVerification: false,
           isLoading: false,
         });
       }
@@ -112,6 +134,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         workspace: null,
         members: [],
         isAuthenticated: false,
+        needsEmailVerification: false,
         isLoading: false,
       });
     }

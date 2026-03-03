@@ -62,20 +62,41 @@ export function NotificationBell() {
       await markAsRead(notification.id);
     }
 
-    // Navigate to the relevant item based on entity type and context
-    // The entityId for mention notifications is the message ID
     const context = notification.context as Record<string, string>;
-    const messageId = notification.entityId;
+    const messageId = notification.latestMessageId || notification.entityId;
 
+    // Use new itemType field for navigation when available
+    if (notification.itemType) {
+      switch (notification.itemType) {
+        case "channel":
+          navigate(`/channels/${notification.itemId}?comment=${messageId}`);
+          break;
+        case "dm":
+          navigate(`/dms/${notification.itemId}?comment=${messageId}`);
+          break;
+        case "task":
+          if (context.boardId) {
+            navigate(
+              `/boards/${context.boardId}?task=${notification.itemId}&comment=${messageId}`,
+            );
+          }
+          break;
+        case "doc":
+          navigate(`/docs/${notification.itemId}?comment=${messageId}`);
+          break;
+      }
+      setIsOpen(false);
+      return;
+    }
+
+    // Legacy fallback for old notifications
     switch (notification.entityType) {
       case "message":
-        // Messages have context with the parent entity info
         if (context.channelId) {
           navigate(`/channels/${context.channelId}?comment=${messageId}`);
         } else if (context.dmId) {
           navigate(`/dms/${context.dmId}?comment=${messageId}`);
         } else if (context.parentTaskId && context.taskId) {
-          // Child task notification — navigate to the parent task
           if (context.boardId) {
             navigate(
               `/boards/${context.boardId}?task=${context.parentTaskId}&comment=${messageId}`,
@@ -109,6 +130,21 @@ export function NotificationBell() {
   const getNotificationItemName = (notification: Notification): string => {
     const context = notification.context as Record<string, string>;
 
+    // Use new item_type field if present
+    if (notification.itemType) {
+      switch (notification.itemType) {
+        case "channel":
+          return context.channelName ? `#${context.channelName}` : "a channel";
+        case "task":
+          return context.taskTitle || "a task";
+        case "doc":
+          return context.docTitle || "a document";
+        case "dm":
+          return context.dmName || "a conversation";
+      }
+    }
+
+    // Legacy fallback for old notifications
     if (notification.entityType === "message") {
       if (context.channelName) {
         return `#${context.channelName}`;
@@ -124,6 +160,31 @@ export function NotificationBell() {
       return context.taskTitle || "a task";
     }
     return "an item";
+  };
+
+  const getNotificationLabel = (notification: Notification): string => {
+    const name = getNotificationItemName(notification);
+    const count = notification.eventCount || 1;
+
+    switch (notification.type) {
+      case "mention":
+        return `@mentioned you in ${name}`;
+      case "comment":
+        if (notification.itemType === "dm") {
+          return count > 1
+            ? `sent you ${count} messages`
+            : `sent you a message`;
+        }
+        return count > 1
+          ? `${count} new comments on ${name}`
+          : `commented on ${name}`;
+      case "thread_reply":
+        return count > 1
+          ? `${count} new replies in a thread`
+          : `replied in a thread`;
+      default:
+        return name;
+    }
   };
 
   return (
@@ -191,20 +252,18 @@ export function NotificationBell() {
                           @
                         </div>
                       )}
+                      {notification.type === "thread_reply" && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                          &#8617;
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {notification.type === "mention" && (
-                          <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded">
-                            @mentioned you in:
-                          </span>
-                        )}
-                        <span className="text-sm font-medium text-dark-text truncate">
-                          {getNotificationItemName(notification)}
-                        </span>
-                      </div>
+                      <p className="text-sm text-dark-text">
+                        <span className="font-medium">{notification.actorName}</span>{" "}
+                        {getNotificationLabel(notification)}
+                      </p>
                       <p className="text-xs text-dark-text-muted mt-1">
-                        {notification.actorName} &middot;{" "}
                         {formatDistanceToNow(
                           new Date(notification.insertedAt),
                           {

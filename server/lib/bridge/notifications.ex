@@ -99,6 +99,61 @@ defmodule Bridge.Notifications do
   end
 
   @doc """
+  Upserts a rolled-up notification.
+  If a notification with the same (user_id, type, item_type, item_id, thread_id) exists,
+  updates the actor, increments event_count, marks as unread, and updates context.
+  Otherwise creates a new notification.
+
+  ## Examples
+
+      iex> upsert_notification(%{type: "comment", item_type: "task", item_id: id, ...})
+      {:ok, %Notification{}}
+
+  """
+  def upsert_notification(attrs) do
+    thread_id = Map.get(attrs, :thread_id)
+
+    # Build the conflict query with COALESCE for null thread_id
+    conflict_query =
+      if thread_id do
+        from(n in Notification,
+          where:
+            n.user_id == ^attrs.user_id and
+              n.type == ^attrs.type and
+              n.item_type == ^attrs.item_type and
+              n.item_id == ^attrs.item_id and
+              n.thread_id == ^thread_id
+        )
+      else
+        from(n in Notification,
+          where:
+            n.user_id == ^attrs.user_id and
+              n.type == ^attrs.type and
+              n.item_type == ^attrs.item_type and
+              n.item_id == ^attrs.item_id and
+              is_nil(n.thread_id)
+        )
+      end
+
+    case Repo.one(conflict_query) do
+      nil ->
+        create_notification(attrs)
+
+      existing ->
+        existing
+        |> Ecto.Changeset.change(%{
+          actor_id: attrs.actor_id,
+          latest_message_id: Map.get(attrs, :latest_message_id),
+          event_count: existing.event_count + 1,
+          context: Map.get(attrs, :context, existing.context),
+          read: false,
+          updated_at: DateTime.utc_now()
+        })
+        |> Repo.update()
+    end
+  end
+
+  @doc """
   Marks a notification as read.
 
   ## Examples

@@ -37,6 +37,11 @@ defmodule BridgeWeb.NotificationJSON do
     %{
       id: notification.id,
       type: notification.type,
+      item_type: notification.item_type,
+      item_id: notification.item_id,
+      thread_id: notification.thread_id,
+      latest_message_id: notification.latest_message_id,
+      event_count: notification.event_count,
       entity_type: notification.entity_type,
       entity_id: notification.entity_id,
       context: notification.context,
