@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C5CE7"/>
+      <stop offset="100%" style="stop-color:#00B4D8"/>
+    </linearGradient>
+    <linearGradient id="nucleusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#A78BFA"/>
+      <stop offset="50%" style="stop-color:#6C5CE7"/>
+      <stop offset="100%" style="stop-color:#00B4D8"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F172A"/>
+      <stop offset="100%" style="stop-color:#1E293B"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="url(#bgGrad)"/>
+
+  <g transform="translate(64, 64)">
+    <!-- Orbit 1: horizontal-ish -->
+    <ellipse cx="0" cy="0" rx="46" ry="16" fill="none" stroke="url(#orbitGrad)" stroke-width="2" opacity="0.5" transform="rotate(0)"/>
+
+    <!-- Orbit 2: tilted left -->
+    <ellipse cx="0" cy="0" rx="46" ry="16" fill="none" stroke="url(#orbitGrad)" stroke-width="2" opacity="0.5" transform="rotate(60)"/>
+
+    <!-- Orbit 3: tilted right -->
+    <ellipse cx="0" cy="0" rx="46" ry="16" fill="none" stroke="url(#orbitGrad)" stroke-width="2" opacity="0.5" transform="rotate(-60)"/>
+
+    <!-- Electron dots on orbits -->
+    <circle cx="42" cy="0" r="4" fill="#A78BFA" opacity="0.9" transform="rotate(15)"/>
+    <circle cx="-38" cy="0" r="4" fill="#22D3EE" opacity="0.9" transform="rotate(70)"/>
+    <circle cx="34" cy="0" r="4" fill="#818CF8" opacity="0.9" transform="rotate(-40)"/>
+
+    <!-- Nucleus glow -->
+    <circle cx="0" cy="0" r="16" fill="url(#nucleusGrad)" opacity="0.15" filter="url(#glow)"/>
+
+    <!-- Nucleus -->
+    <circle cx="0" cy="0" r="12" fill="url(#nucleusGrad)"/>
+
+    <!-- Inner shine -->
+    <circle cx="-3" cy="-3" r="5" fill="white" opacity="0.2"/>
+  </g>
+</svg>

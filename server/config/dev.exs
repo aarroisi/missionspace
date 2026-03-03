@@ -64,3 +64,9 @@ config :phoenix, :plug_init_mode, :runtime
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Web Push VAPID keys for development
+config :web_push_encryption, :vapid_details,
+  subject: "mailto:dev@localhost",
+  public_key: "BKEX4lraAaykIyHgHLZGGZLu04cpe1WHkVr9Ud8oCCe273Sc4jiBMhMv5PMwdCQ4kBII7RkoY12E6pxsX_ZHwrQ",
+  private_key: "c64rQ0K4W2QtekNLoiSj-Ph4QjRge6cTfUDzUJwlrfI"

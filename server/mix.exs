@@ -60,6 +60,7 @@ defmodule Bridge.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:hackney, "~> 1.20"},
       {:sweet_xml, "~> 0.7"},
+      {:web_push_encryption, "~> 0.3"},
       {:tidewave, "~> 0.5", only: :dev},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.18", only: :test}

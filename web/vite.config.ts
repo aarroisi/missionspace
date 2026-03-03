@@ -5,6 +5,9 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react(), VitePWA({
+    strategies: 'injectManifest',
+    srcDir: 'src',
+    filename: 'sw.ts',
     registerType: 'autoUpdate',
     includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
     manifest: {
@@ -29,7 +32,7 @@ export default defineConfig({
         }
       ]
     },
-    workbox: {
+    injectManifest: {
       globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       maximumFileSizeToCacheInBytes: 3 * 1024 * 1024
     }

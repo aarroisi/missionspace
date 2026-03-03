@@ -99,6 +99,11 @@ defmodule BridgeWeb.Router do
     get("/read-positions/:item_type/:item_id", ReadPositionController, :show)
     post("/read-positions/:item_type/:item_id", ReadPositionController, :create)
 
+    # Push notification routes
+    get("/push/vapid-key", PushSubscriptionController, :vapid_key)
+    post("/push/subscribe", PushSubscriptionController, :subscribe)
+    delete("/push/subscribe", PushSubscriptionController, :unsubscribe)
+
     # Asset routes
     post("/assets/request-upload", AssetController, :request_upload)
     post("/assets/:id/confirm", AssetController, :confirm)

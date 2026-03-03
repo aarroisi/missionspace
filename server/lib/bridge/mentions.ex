@@ -195,29 +195,94 @@ defmodule Bridge.Mentions do
   end
 
   @doc """
-  Broadcasts a notification to the user's notification channel.
+  Broadcasts a notification to the user's notification channel and sends web push.
   """
   def broadcast_notification(notification) do
-    BridgeWeb.NotificationChannel.broadcast_notification(
-      notification.user_id,
-      %{
-        id: notification.id,
-        type: notification.type,
-        item_type: notification.item_type,
-        item_id: notification.item_id,
-        thread_id: notification.thread_id,
-        latest_message_id: notification.latest_message_id,
-        event_count: notification.event_count,
-        context: notification.context,
-        read: notification.read,
-        user_id: notification.user_id,
-        actor_id: notification.actor_id,
-        actor_name: if(notification.actor, do: notification.actor.name, else: nil),
-        actor_avatar: if(notification.actor, do: notification.actor.avatar, else: nil),
-        inserted_at: notification.inserted_at,
-        updated_at: notification.updated_at
-      }
-    )
+    data = %{
+      id: notification.id,
+      type: notification.type,
+      item_type: notification.item_type,
+      item_id: notification.item_id,
+      thread_id: notification.thread_id,
+      latest_message_id: notification.latest_message_id,
+      event_count: notification.event_count,
+      context: notification.context,
+      read: notification.read,
+      user_id: notification.user_id,
+      actor_id: notification.actor_id,
+      actor_name: if(notification.actor, do: notification.actor.name, else: nil),
+      actor_avatar: if(notification.actor, do: notification.actor.avatar, else: nil),
+      inserted_at: notification.inserted_at,
+      updated_at: notification.updated_at
+    }
+
+    BridgeWeb.NotificationChannel.broadcast_notification(notification.user_id, data)
+
+    # Send web push notification (fire-and-forget, errors won't block)
+    try do
+      actor_name = data[:actor_name] || "Someone"
+      frontend_url = Application.get_env(:bridge, :frontend_url, "https://missionspace.co")
+
+      Bridge.PushNotifications.send_web_push(notification.user_id, %{
+        title: push_title(notification.type, notification.item_type, actor_name),
+        body: push_body(notification.type, notification.item_type, actor_name),
+        data: %{url: build_notification_url(frontend_url, data)}
+      })
+    rescue
+      _ -> :ok
+    end
+  end
+
+  defp push_title(type, item_type, actor_name) do
+    case type do
+      "mention" -> "#{actor_name} mentioned you"
+      "thread_reply" -> "#{actor_name} replied in a thread"
+      "comment" -> "#{actor_name} commented on a #{item_type}"
+      _ -> "New notification"
+    end
+  end
+
+  defp push_body(type, item_type, _actor_name) do
+    case {type, item_type} do
+      {"mention", "channel"} -> "You were mentioned in a channel"
+      {"mention", "dm"} -> "You were mentioned in a message"
+      {"mention", "task"} -> "You were mentioned on a task"
+      {"mention", "doc"} -> "You were mentioned on a doc"
+      {"thread_reply", _} -> "New reply in a thread you're following"
+      {"comment", "channel"} -> "New message in a channel you're following"
+      {"comment", "dm"} -> "New direct message"
+      {"comment", "task"} -> "New comment on a task you're following"
+      {"comment", "doc"} -> "New comment on a doc you're following"
+      _ -> "You have a new notification"
+    end
+  end
+
+  defp build_notification_url(frontend_url, data) do
+    context = data[:context] || %{}
+
+    path =
+      case data[:item_type] do
+        "channel" ->
+          if channel_id = context[:channelId], do: "/channels/#{channel_id}", else: "/dashboard"
+
+        "dm" ->
+          if dm_id = context[:dmId], do: "/dms/#{dm_id}", else: "/dashboard"
+
+        "task" ->
+          if board_id = context[:boardId] do
+            "/boards/#{board_id}?task=#{data[:item_id]}"
+          else
+            "/dashboard"
+          end
+
+        "doc" ->
+          if doc_id = context[:docId], do: "/docs/#{doc_id}", else: "/dashboard"
+
+        _ ->
+          "/dashboard"
+      end
+
+    "#{frontend_url}#{path}"
   end
 
   @doc """

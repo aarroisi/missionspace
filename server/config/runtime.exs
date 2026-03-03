@@ -46,6 +46,14 @@ end
 config :bridge, BridgeWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Web Push VAPID configuration
+if System.get_env("VAPID_PUBLIC_KEY") do
+  config :web_push_encryption, :vapid_details,
+    subject: System.get_env("VAPID_SUBJECT", "mailto:support@missionspace.co"),
+    public_key: System.get_env("VAPID_PUBLIC_KEY"),
+    private_key: System.get_env("VAPID_PRIVATE_KEY")
+end
+
 # Cloudflare R2 Storage Configuration
 # R2 uses S3-compatible API with presigned URLs for all access
 if System.get_env("R2_ACCESS_KEY_ID") do
