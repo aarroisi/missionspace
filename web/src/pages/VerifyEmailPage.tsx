@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { Mail, CheckCircle, Loader2 } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 export function VerifyEmailPage() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export function VerifyEmailPage() {
     setVerifying(true);
     setError("");
     try {
-      const response = await fetch("/api/auth/verify-email", {
+      const response = await fetch(`${API_URL}/auth/verify-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -56,7 +57,7 @@ export function VerifyEmailPage() {
     setResending(true);
     setError("");
     try {
-      const response = await fetch("/api/auth/resend-verification", {
+      const response = await fetch(`${API_URL}/auth/resend-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

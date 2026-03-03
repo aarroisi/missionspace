@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { User } from "@/types";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 
 interface ItemWithCreator {
   createdById?: string;
@@ -87,7 +87,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   checkAuth: async () => {
     try {
-      const response = await fetch("/api/auth/me", {
+      const response = await fetch(`${API_URL}/auth/me`, {
         credentials: "include",
       });
 
