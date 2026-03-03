@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, BellOff, BellRing, CheckCheck } from "lucide-react";
 import { clsx } from "clsx";
 import { formatDistanceToNow } from "date-fns";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { useWebPush } from "@/hooks/useWebPush";
 import { Avatar } from "@/components/ui/Avatar";
 import { Notification } from "@/types";
 
@@ -214,15 +215,18 @@ export function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
             <h3 className="font-medium text-dark-text">Notifications</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => markAllAsRead()}
-                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-              >
-                <CheckCheck size={14} />
-                Mark all read
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <PushToggle />
+              {unreadCount > 0 && (
+                <button
+                  onClick={() => markAllAsRead()}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                >
+                  <CheckCheck size={14} />
+                  Mark all read
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Notification list */}
@@ -294,5 +298,45 @@ export function NotificationBell() {
         </div>
       )}
     </div>
+  );
+}
+
+function PushToggle() {
+  const { isSupported, isSubscribed, permission, isLoading, subscribe, unsubscribe } = useWebPush();
+
+  if (!isSupported) return null;
+
+  const handleClick = async () => {
+    if (isSubscribed) {
+      await unsubscribe();
+    } else {
+      await subscribe();
+    }
+  };
+
+  const isDenied = permission === "denied";
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading || isDenied}
+      className={clsx(
+        "p-1 rounded transition-colors",
+        isDenied
+          ? "text-dark-text-muted/50 cursor-not-allowed"
+          : isSubscribed
+            ? "text-blue-400 hover:text-blue-300"
+            : "text-dark-text-muted hover:text-dark-text",
+      )}
+      title={
+        isDenied
+          ? "Push notifications blocked in browser settings"
+          : isSubscribed
+            ? "Disable push notifications"
+            : "Enable push notifications"
+      }
+    >
+      {isSubscribed ? <BellRing size={14} /> : <BellOff size={14} />}
+    </button>
   );
 }

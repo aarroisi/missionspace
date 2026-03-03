@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { StorageUsage } from "@/components/features/StorageUsage";
-import { useWebPush } from "@/hooks/useWebPush";
 
 export function GeneralSettingsPage() {
   const { workspace, updateWorkspace } = useAuthStore();
@@ -137,70 +136,6 @@ export function GeneralSettingsPage() {
           images.
         </p>
         <StorageUsage />
-      </div>
-
-      {/* Push Notifications Section */}
-      <PushNotificationSettings />
-    </div>
-  );
-}
-
-function PushNotificationSettings() {
-  const { isSupported, isSubscribed, permission, isLoading, subscribe, unsubscribe } = useWebPush();
-  const { success, error } = useToastStore();
-
-  if (!isSupported) return null;
-
-  const handleToggle = async () => {
-    try {
-      if (isSubscribed) {
-        await unsubscribe();
-        success("Push notifications disabled");
-      } else {
-        const ok = await subscribe();
-        if (ok) {
-          success("Push notifications enabled");
-        } else if (permission === "denied") {
-          error("Notifications are blocked. Please enable them in your browser settings.");
-        }
-      }
-    } catch {
-      error("Failed to update push notification settings");
-    }
-  };
-
-  return (
-    <div className="mt-12">
-      <h2 className="text-lg font-semibold text-dark-text mb-2">
-        Push Notifications
-      </h2>
-      <p className="text-dark-text-muted mb-4">
-        Receive push notifications even when the app is not open.
-      </p>
-      <div className="flex items-center justify-between p-4 bg-dark-surface border border-dark-border rounded-lg">
-        <div>
-          <div className="text-sm font-medium text-dark-text">
-            {isSubscribed ? "Push notifications are enabled" : "Push notifications are disabled"}
-          </div>
-          {permission === "denied" && (
-            <div className="text-xs text-red-400 mt-1">
-              Notifications are blocked in your browser settings
-            </div>
-          )}
-        </div>
-        <button
-          onClick={handleToggle}
-          disabled={isLoading || permission === "denied"}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            isSubscribed ? "bg-blue-600" : "bg-dark-hover"
-          } ${isLoading || permission === "denied" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              isSubscribed ? "translate-x-6" : "translate-x-1"
-            }`}
-          />
-        </button>
       </div>
     </div>
   );

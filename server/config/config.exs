@@ -32,7 +32,7 @@ config :bridge, BridgeWeb.Endpoint,
 config :bridge, Bridge.Mailer, adapter: Swoosh.Adapters.Local
 
 # Email sender and frontend URL
-config :bridge, :from_email, "Mission Space <noreply@missionspace.co>"
+config :bridge, :from_email, "noreply@missionspace.co"
 config :bridge, :frontend_url, "http://localhost:5173"
 
 # Configure Elixir's Logger
