@@ -1,10 +1,10 @@
 defmodule Bridge.Emails do
   import Swoosh.Email
 
-  @from_name "Bridge"
+  @from_name "Mission Space"
 
   defp from_email do
-    Application.get_env(:bridge, :from_email, "noreply@bridgework.com")
+    Application.get_env(:bridge, :from_email, "noreply@missionspace.co")
   end
 
   defp frontend_url do
@@ -19,13 +19,13 @@ defmodule Bridge.Emails do
     |> from({@from_name, from_email()})
     |> subject("Verify your email address")
     |> html_body("""
-    <h2>Welcome to Bridge, #{user.name}!</h2>
+    <h2>Welcome to Mission Space, #{user.name}!</h2>
     <p>Please verify your email address by clicking the link below:</p>
     <p><a href="#{url}">Verify Email Address</a></p>
     <p>If you didn't create an account, you can safely ignore this email.</p>
     """)
     |> text_body("""
-    Welcome to Bridge, #{user.name}!
+    Welcome to Mission Space, #{user.name}!
 
     Please verify your email address by visiting this link:
     #{url}

@@ -72,7 +72,7 @@ export function RegisterPage() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-dark-text mb-2">
-            Welcome to Bridge
+            Welcome to Mission Space
           </h1>
           <p className="text-dark-text-muted">
             Create your workspace to get started
@@ -106,7 +106,7 @@ export function RegisterPage() {
               This will be your workspace URL:{" "}
               {workspaceName.toLowerCase().replace(/\s+/g, "-") ||
                 "your-workspace"}
-              .bridgework.com
+              .missionspace.co
             </p>
           </div>
 

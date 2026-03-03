@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Bridge - Team Collaboration',
-        short_name: 'Bridge',
+        name: 'Mission Space - Team Collaboration',
+        short_name: 'Mission Space',
         description: 'Team collaboration with docs, lists, and chat',
         theme_color: '#0f172a',
         background_color: '#0f172a',
