@@ -21,7 +21,6 @@ import { LoginPage } from "./pages/LoginPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import { LandingPage } from "./pages/LandingPage";
 import { ToastContainer } from "./components/ui/Toast";
 import { MemberProfileProvider } from "./contexts/MemberProfileContext";
 import { useAuthStore } from "./stores/authStore";
@@ -146,7 +145,7 @@ function App() {
     return (
       <>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={null} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -162,7 +161,7 @@ function App() {
   return (
     <MemberProfileProvider>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={null} />
         <Route
           path="/dashboard"
           element={

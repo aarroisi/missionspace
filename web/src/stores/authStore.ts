@@ -64,6 +64,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
       });
       api.setToken(data.token);
+      localStorage.setItem("logged_in", "1");
       set({
         user: data.user,
         workspace: data.workspace,
@@ -82,6 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.error("Logout request failed:", error);
     } finally {
       api.clearToken();
+      localStorage.removeItem("logged_in");
       set({ user: null, workspace: null, members: [], isAuthenticated: false });
     }
   },
@@ -94,6 +96,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (response.ok) {
         const data = await response.json();
+        localStorage.setItem("logged_in", "1");
         set({
           user: data.user,
           workspace: data.workspace,
@@ -103,6 +106,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         });
       } else if (response.status === 403) {
         const data = await response.json();
+        localStorage.removeItem("logged_in");
         if (data.error === "email_not_verified") {
           set({
             isAuthenticated: false,
@@ -120,6 +124,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           });
         }
       } else {
+        localStorage.removeItem("logged_in");
         set({
           user: null,
           workspace: null,
@@ -130,6 +135,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         });
       }
     } catch (error) {
+      localStorage.removeItem("logged_in");
       set({
         user: null,
         workspace: null,

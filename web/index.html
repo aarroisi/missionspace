@@ -25,14 +25,22 @@
     <div id="seo-landing" style="min-height:100vh;background:#0f172a;display:flex;flex-direction:column;font-family:system-ui,-apple-system,sans-serif">
       <header style="display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem">
         <span style="font-size:1.25rem;font-weight:700;color:#f1f5f9">Mission Space</span>
-        <a href="/login" style="padding:0.5rem 1.25rem;background:#2563eb;color:#fff;border-radius:0.5rem;font-weight:500;text-decoration:none">Log In</a>
+        <a id="seo-header-cta" href="/login" style="padding:0.5rem 1.25rem;background:#2563eb;color:#fff;border-radius:0.5rem;font-weight:500;text-decoration:none">Log In</a>
       </header>
       <main style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 1rem;margin-top:-5rem">
         <h1 style="font-size:3rem;font-weight:700;color:#f1f5f9;margin-bottom:1rem;text-align:center;line-height:1.2">Team collaboration,<br>simplified.</h1>
         <p style="font-size:1.125rem;color:#94a3b8;margin-bottom:2rem;text-align:center;max-width:32rem">Docs, boards, and chat in one place. Keep your team aligned without switching between tools.</p>
-        <a href="/register" style="padding:0.75rem 2rem;background:#2563eb;color:#fff;border-radius:0.5rem;font-size:1.125rem;font-weight:500;text-decoration:none">Get Started</a>
+        <a id="seo-main-cta" href="/register" style="padding:0.75rem 2rem;background:#2563eb;color:#fff;border-radius:0.5rem;font-size:1.125rem;font-weight:500;text-decoration:none">Get Started</a>
       </main>
     </div>
+    <script>
+      if(localStorage.getItem("logged_in")){
+        var h=document.getElementById("seo-header-cta");
+        var m=document.getElementById("seo-main-cta");
+        if(h){h.href="/dashboard";h.textContent="Dashboard";}
+        if(m){m.href="/dashboard";m.textContent="Go to Dashboard";}
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
