@@ -78,7 +78,7 @@ defmodule Bridge.Factory do
 
   def channel_factory do
     %Bridge.Chat.Channel{
-      name: "#" <> Faker.Lorem.word(),
+      name: sequence(:channel_name, &"#channel-#{&1}"),
       starred: false
     }
   end
