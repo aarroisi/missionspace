@@ -2,8 +2,13 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
 import { SettingsLayout } from "./components/layout/SettingsLayout";
+import { useIsMobile } from "./hooks/useIsMobile";
 import { HomePage } from "./pages/HomePage";
 import { EmptyState } from "./pages/EmptyState";
+import { MobileProjectsPage } from "./pages/MobileProjectsPage";
+import { MobileBoardsPage } from "./pages/MobileBoardsPage";
+import { MobileChatPage } from "./pages/MobileChatPage";
+import { MobileDocFoldersPage } from "./pages/MobileDocFoldersPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { BoardView } from "./pages/BoardView";
 import { DocFolderView } from "./pages/DocFolderView";
@@ -26,8 +31,37 @@ import { useDocStore } from "./stores/docStore";
 import { useDocFolderStore } from "./stores/docFolderStore";
 import { useChatStore } from "./stores/chatStore";
 import { useNotificationChannel } from "./hooks/useNotificationChannel";
+import { UpdatesPage } from "./pages/UpdatesPage";
 import { SearchModal } from "./components/features/SearchModal";
 import { useSearchStore } from "./stores/searchStore";
+
+function SettingsIndexRoute() {
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return <SettingsLayout>{null}</SettingsLayout>;
+  }
+  return <Navigate to="/settings/general" replace />;
+}
+
+function ProjectsIndexRoute() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileProjectsPage /> : <EmptyState />;
+}
+
+function BoardsIndexRoute() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileBoardsPage /> : <EmptyState />;
+}
+
+function ChatIndexRoute() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileChatPage /> : <EmptyState />;
+}
+
+function DocFoldersIndexRoute() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileDocFoldersPage /> : <EmptyState />;
+}
 
 function App() {
   const { checkAuth, fetchMembers, isAuthenticated, isLoading, needsEmailVerification } =
@@ -138,10 +172,18 @@ function App() {
           }
         />
         <Route
+          path="/updates"
+          element={
+            <MainLayout>
+              <UpdatesPage />
+            </MainLayout>
+          }
+        />
+        <Route
           path="/projects"
           element={
             <MainLayout>
-              <EmptyState />
+              <ProjectsIndexRoute />
             </MainLayout>
           }
         />
@@ -199,7 +241,7 @@ function App() {
           path="/boards"
           element={
             <MainLayout>
-              <EmptyState />
+              <BoardsIndexRoute />
             </MainLayout>
           }
         />
@@ -248,7 +290,7 @@ function App() {
           path="/channels"
           element={
             <MainLayout>
-              <EmptyState />
+              <ChatIndexRoute />
             </MainLayout>
           }
         />
@@ -257,6 +299,14 @@ function App() {
           element={
             <MainLayout>
               <ChatView />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/doc-folders"
+          element={
+            <MainLayout>
+              <DocFoldersIndexRoute />
             </MainLayout>
           }
         />
@@ -278,7 +328,7 @@ function App() {
         />
         <Route
           path="/settings"
-          element={<Navigate to="/settings/general" replace />}
+          element={<SettingsIndexRoute />}
         />
         <Route
           path="/settings/general"

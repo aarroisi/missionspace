@@ -133,7 +133,7 @@ export function DiscussionThread({
         onClick={onClose}
       />
 
-      <div className="absolute lg:relative top-0 right-0 bottom-0 w-[calc(100%-15rem)] lg:w-[28rem] bg-dark-surface border-l border-dark-border flex flex-col z-50">
+      <div className="absolute lg:relative top-0 right-0 bottom-0 w-full md:w-[calc(100%-15rem)] lg:w-[28rem] bg-dark-surface border-l border-dark-border flex flex-col z-50">
         <ThreadHeader parentMessageId={parentMessage.id} onClose={onClose} />
 
         <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
@@ -159,7 +159,7 @@ export function DiscussionThread({
           ))}
         </div>
 
-        <div className="p-4 border-t border-dark-border">
+        <div className="border-t border-dark-border">
           <CommentEditor
             ref={replyTextareaRef}
             value={replyText}

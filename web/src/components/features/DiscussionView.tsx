@@ -203,7 +203,7 @@ export function DiscussionView({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto relative" ref={scrollContainerRef}>
-        <div className={`px-8 py-6 max-w-7xl mx-auto w-full ${topLevelMessages.length === 0 ? "min-h-full flex flex-col justify-center" : ""}`}>
+        <div className={`py-2 max-w-7xl mx-auto w-full ${topLevelMessages.length === 0 ? "min-h-full flex flex-col justify-center" : ""}`}>
           {hasMoreMessages && onLoadMore && (
             <div className="mb-4 flex justify-center">
               <button
@@ -240,17 +240,10 @@ export function DiscussionView({
                         onReply={() => setOpenThread(message)}
                         onQuote={() => handleQuote(message)}
                         onQuotedClick={handleQuotedClick}
+                        replyCount={replies.length}
+                        onReplyCountClick={() => setOpenThread(message)}
                         fileUpload={fileUpload}
                       />
-                      {replies.length > 0 && (
-                        <button
-                          onClick={() => setOpenThread(message)}
-                          className="ml-14 text-xs text-blue-400 hover:underline"
-                        >
-                          {replies.length}{" "}
-                          {replies.length === 1 ? "reply" : "replies"}
-                        </button>
-                      )}
                     </div>
                   </div>
                 );
@@ -272,7 +265,7 @@ export function DiscussionView({
         </div>
       </div>
 
-      <div className="relative border-t border-dark-border bg-dark-bg p-4 max-w-7xl mx-auto w-full">
+      <div className="relative border-t border-dark-border bg-dark-bg max-w-7xl mx-auto w-full">
         {showJumpToBottom && showJumpButton && (
           <button
             onClick={handleJumpToBottom}

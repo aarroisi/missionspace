@@ -622,10 +622,10 @@ export function TaskDetailModal({
           </div>
 
           {/* Comments Section */}
-          <div className="px-6 py-4">
+          <div className="py-4">
             {topLevelComments.length > 0 ? (
               <>
-                <h3 className="text-sm font-medium text-dark-text mb-3">
+                <h3 className="text-sm font-medium text-dark-text mb-3 px-4 md:px-6">
                   Comments ({topLevelComments.length})
                 </h3>
                 {hasMoreMessages("task", task.id) && (
@@ -649,21 +649,14 @@ export function TaskDetailModal({
                           onReply={() => setOpenThread(comment)}
                           onQuote={() => handleQuote(comment)}
                           onQuotedClick={handleQuotedClick}
+                          replyCount={replies.length}
+                          onReplyCountClick={() => setOpenThread(comment)}
                           fileUpload={{
                             attachableType: "task",
                             attachableId: task.id,
                             onError: (msg) => toastError(msg),
                           }}
                         />
-                        {replies.length > 0 && (
-                          <button
-                            onClick={() => setOpenThread(comment)}
-                            className="ml-14 text-xs text-blue-400 hover:underline"
-                          >
-                            {replies.length}{" "}
-                            {replies.length === 1 ? "reply" : "replies"}
-                          </button>
-                        )}
                       </div>
                     );
                   })}
@@ -685,7 +678,7 @@ export function TaskDetailModal({
       </div>
 
       {/* Comment Editor - Fixed at bottom */}
-      <div className="border-t border-dark-border p-4 flex-shrink-0">
+      <div className="border-t border-dark-border flex-shrink-0">
         <CommentEditor
           ref={commentEditorRef}
           value={newComment}

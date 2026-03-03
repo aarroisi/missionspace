@@ -173,7 +173,7 @@ export const CommentEditor = forwardRef<
 
     return (
       <div
-        className={`relative border border-dark-border rounded-lg overflow-hidden ${containerBg} transition-colors hover:border-gray-600 focus-within:!border-blue-500`}
+        className={`relative overflow-hidden ${containerBg} transition-colors`}
       >
         {quotingMessage && onCancelQuote && (
           <div className={`px-3 py-2 border-b border-dark-border ${quoteBg}`}>

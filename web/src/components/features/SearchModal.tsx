@@ -8,9 +8,11 @@ import {
   Folder,
   FileText,
   Hash,
+  X,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useSearchStore } from "@/stores/searchStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Avatar } from "@/components/ui/Avatar";
 import type { SearchResults } from "@/types";
 
@@ -189,6 +191,7 @@ function ResultRow({
 export function SearchModal() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
   const {
     isOpen,
     query,
@@ -264,14 +267,27 @@ export function SearchModal() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-[70] flex items-start justify-center pt-[15vh]"
+      className={clsx(
+        "fixed inset-0 z-[70] flex",
+        isMobile
+          ? "flex-col bg-dark-surface"
+          : "bg-black/50 items-start justify-center pt-[15vh]",
+      )}
       onClick={(e) => {
-        if (e.target === e.currentTarget) close();
+        if (!isMobile && e.target === e.currentTarget) close();
       }}
     >
-      <div className="w-full max-w-xl bg-dark-surface border border-dark-border rounded-lg shadow-2xl overflow-hidden">
+      <div className={clsx(
+        "overflow-hidden flex flex-col",
+        isMobile
+          ? "w-full h-full"
+          : "w-full max-w-xl bg-dark-surface border border-dark-border rounded-lg shadow-2xl",
+      )}>
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border">
+        <div className={clsx(
+          "flex items-center gap-3 px-4 py-3 border-b border-dark-border",
+          isMobile && "pt-[max(0.75rem,env(safe-area-inset-top))]",
+        )}>
           <Search size={18} className="text-dark-text-muted shrink-0" />
           <input
             ref={inputRef}
@@ -282,13 +298,22 @@ export function SearchModal() {
             placeholder="Search anything..."
             className="flex-1 bg-transparent text-dark-text placeholder:text-dark-text-muted focus:outline-none text-sm"
           />
-          <kbd className="hidden sm:inline-flex text-xs text-dark-text-muted bg-dark-bg px-1.5 py-0.5 rounded border border-dark-border">
-            ESC
-          </kbd>
+          {isMobile ? (
+            <button onClick={close} className="text-dark-text-muted hover:text-dark-text">
+              <X size={20} />
+            </button>
+          ) : (
+            <kbd className="hidden sm:inline-flex text-xs text-dark-text-muted bg-dark-bg px-1.5 py-0.5 rounded border border-dark-border">
+              ESC
+            </kbd>
+          )}
         </div>
 
         {/* Results */}
-        <div className="max-h-[50vh] overflow-y-auto">
+        <div className={clsx(
+          "overflow-y-auto",
+          isMobile ? "flex-1" : "max-h-[50vh]",
+        )}>
           {isLoading && hasQuery && (
             <div className="px-4 py-6 text-center text-dark-text-muted text-sm">
               Searching...

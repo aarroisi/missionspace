@@ -33,7 +33,7 @@ export function ConfirmModal({
       : "bg-blue-600 hover:bg-blue-700";
 
   return (
-    <Modal title={title} onClose={onCancel} size="md">
+    <Modal title={title} onClose={onCancel} size="md" fullScreenOnMobile={false}>
       <div className="p-6">
         <p className="text-dark-text-muted mb-6">{message}</p>
 

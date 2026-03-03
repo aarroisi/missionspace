@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Kanban,
@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
+import { MobileBackButton } from "@/components/ui/MobileBackButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { CreateBoardModal } from "@/components/features/CreateBoardModal";
 import { CreateDocFolderModal } from "@/components/features/CreateDocFolderModal";
@@ -246,24 +247,36 @@ export function ProjectPage() {
   const [showMembersModal, setShowMembersModal] = useState(false);
 
   const projects = useProjectStore((state) => state.projects);
+  const fetchProjects = useProjectStore((state) => state.fetchProjects);
   const updateProject = useProjectStore((state) => state.updateProject);
   const deleteProject = useProjectStore((state) => state.deleteProject);
   const addItem = useProjectStore((state) => state.addItem);
   const removeItem = useProjectStore((state) => state.removeItem);
 
   const boards = useBoardStore((state) => state.boards);
+  const fetchBoards = useBoardStore((state) => state.fetchBoards);
   const createBoard = useBoardStore((state) => state.createBoard);
   const deleteBoard = useBoardStore((state) => state.deleteBoard);
 
   const docFolders = useDocFolderStore((state) => state.folders);
+  const fetchFolders = useDocFolderStore((state) => state.fetchFolders);
   const createDocFolder = useDocFolderStore((state) => state.createFolder);
   const deleteDocFolder = useDocFolderStore((state) => state.deleteFolder);
 
   const channels = useChatStore((state) => state.channels);
+  const fetchChannels = useChatStore((state) => state.fetchChannels);
   const createChannel = useChatStore((state) => state.createChannel);
   const deleteChannel = useChatStore((state) => state.deleteChannel);
 
   const project = projects.find((p) => p.id === id);
+
+  // Fetch store data if not loaded (e.g. direct URL navigation)
+  useEffect(() => {
+    if (projects.length === 0) fetchProjects();
+    if (boards.length === 0) fetchBoards();
+    if (docFolders.length === 0) fetchFolders();
+    if (!Array.isArray(channels) || channels.length === 0) fetchChannels();
+  }, [projects, boards, docFolders, channels, fetchProjects, fetchBoards, fetchFolders, fetchChannels]);
 
   // Get items from project_items and resolve to actual entities
   const projectItems = project?.items || [];
@@ -536,7 +549,9 @@ export function ProjectPage() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between">
+      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-dark-border flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0">
+        <MobileBackButton to="/projects" />
         {editingTitle ? (
           <div className="flex items-center gap-2">
             <input
@@ -551,7 +566,7 @@ export function ProjectPage() {
                 }
               }}
               autoFocus
-              className="text-2xl font-bold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none"
+              className="text-lg md:text-2xl font-bold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none"
             />
             <button
               onClick={handleTitleSave}
@@ -565,7 +580,7 @@ export function ProjectPage() {
           <div>
             <h1
               onClick={handleStartEditingTitle}
-              className="text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
+              className="text-lg md:text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
               title="Click to edit"
             >
               {project.name}
@@ -578,6 +593,7 @@ export function ProjectPage() {
             )}
           </div>
         )}
+        </div>
         <div className="flex items-center gap-2">
           <div className="relative">
             <button
@@ -663,7 +679,7 @@ export function ProjectPage() {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
         {!hasItems ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-dark-surface border-2 border-dark-border mb-4">

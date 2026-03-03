@@ -596,14 +596,14 @@ export function DocView() {
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        className="fixed inset-0 bg-black/50 flex items-center justify-center p-0 md:p-4 z-50"
         onClick={handleBackdropClick}
       >
       <div
-        className="w-full max-w-[900px] min-h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] bg-dark-bg border border-dark-border rounded-lg flex flex-col overflow-hidden relative"
+        className="w-full h-full md:h-auto md:max-w-[900px] md:min-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-2rem)] bg-dark-bg md:border md:border-dark-border md:rounded-lg flex flex-col overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-dark-border w-full flex-shrink-0">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-dark-border w-full flex-shrink-0">
           <div className={`flex justify-between ${isNewDoc ? "items-center" : "items-start"}`}>
             <div className="flex-1 pr-4">
               {isNewDoc ? (
@@ -813,10 +813,10 @@ export function DocView() {
           )}
 
           {!isEditing && (
-            <div className={`px-8 py-6 border-t border-dark-border w-full${topLevelComments.length === 0 ? " flex-1 flex flex-col justify-center" : ""}`}>
+            <div className={`py-4 border-t border-dark-border w-full${topLevelComments.length === 0 ? " flex-1 flex flex-col justify-center" : ""}`}>
               {topLevelComments.length > 0 ? (
                 <>
-                  <h3 className="text-sm font-medium text-dark-text mb-4">
+                  <h3 className="text-sm font-medium text-dark-text mb-4 px-4 md:px-6">
                     Comments ({topLevelComments.length})
                   </h3>
                   {docId && !isNewDoc && hasMoreMessages("doc", docId) && (
@@ -840,21 +840,14 @@ export function DocView() {
                             onReply={() => handleOpenThread(comment)}
                             onQuote={() => handleQuote(comment)}
                             onQuotedClick={handleQuotedClick}
+                            replyCount={replies.length}
+                            onReplyCountClick={() => handleOpenThread(comment)}
                             fileUpload={docId ? {
                               attachableType: "doc",
                               attachableId: docId,
                               onError: (msg) => error(msg),
                             } : undefined}
                           />
-                          {replies.length > 0 && (
-                            <button
-                              onClick={() => handleOpenThread(comment)}
-                              className="ml-14 text-xs text-blue-400 hover:underline"
-                            >
-                              {replies.length}{" "}
-                              {replies.length === 1 ? "reply" : "replies"}
-                            </button>
-                          )}
                         </div>
                       );
                     })}
@@ -875,7 +868,7 @@ export function DocView() {
         </div>
 
         {!isEditing && (
-          <div className="relative border-t border-dark-border bg-dark-bg p-4 w-full">
+          <div className="relative border-t border-dark-border bg-dark-bg w-full">
             {showJumpToBottom && (
               <button
                 onClick={handleJumpToBottom}

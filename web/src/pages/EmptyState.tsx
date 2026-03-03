@@ -39,6 +39,7 @@ export function EmptyState() {
     const path = location.pathname;
     if (path.startsWith("/projects")) return "projects";
     if (path.startsWith("/boards")) return "boards";
+    if (path.startsWith("/doc-folders")) return "docs";
     if (path.startsWith("/docs")) return "docs";
     if (path.startsWith("/channels")) return "channels";
     if (path.startsWith("/dms")) return "dms";
@@ -184,7 +185,7 @@ export function EmptyState() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div className="flex-1 flex items-center justify-center p-4 md:p-8">
       <div className="text-center max-w-md">
         <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-dark-surface border-2 border-dark-border mb-6">
           <Icon size={48} className="text-dark-text-muted" />

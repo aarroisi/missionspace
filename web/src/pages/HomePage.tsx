@@ -173,17 +173,17 @@ export function HomePage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 bg-dark-surface">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-dark-surface">
       {/* Workspace branding - centered like Basecamp */}
-      <div className="flex flex-col items-center mb-10">
+      <div className="flex flex-col items-center mb-6 md:mb-10">
         {logoUrl ? (
           <img
             src={logoUrl}
             alt={workspace?.name}
-            className="h-28 rounded-lg object-cover"
+            className="h-16 md:h-28 rounded-lg object-cover"
           />
         ) : (
-          <h1 className="font-bold text-dark-text text-4xl">
+          <h1 className="font-bold text-dark-text text-2xl md:text-4xl">
             {workspace?.name || "Home"}
           </h1>
         )}

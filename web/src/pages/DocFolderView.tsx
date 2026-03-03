@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Users,
 } from "lucide-react";
+import { MobileBackButton } from "@/components/ui/MobileBackButton";
 import { format } from "date-fns";
 
 export function DocFolderView() {
@@ -24,7 +25,7 @@ export function DocFolderView() {
   }>();
   const folderId = folderIdParam || id;
   const navigate = useNavigate();
-  const { folders, updateFolder, deleteFolder, toggleFolderStar } =
+  const { folders, fetchFolders, updateFolder, deleteFolder, toggleFolderStar } =
     useDocFolderStore();
   const { docs, fetchDocs } = useDocStore();
   const { success, error } = useToastStore();
@@ -35,6 +36,13 @@ export function DocFolderView() {
   const [editedName, setEditedName] = useState("");
 
   const folder = folders.find((f) => f.id === folderId);
+
+  // Fetch folders if not loaded (e.g. direct URL navigation)
+  useEffect(() => {
+    if (folderId && folders.length === 0) {
+      fetchFolders();
+    }
+  }, [folderId, folders, fetchFolders]);
 
   useEffect(() => {
     if (folderId) {
@@ -116,9 +124,10 @@ export function DocFolderView() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-dark-border">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-dark-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
+              <MobileBackButton to={projectIdParam ? `/projects/${projectIdParam}` : "/doc-folders"} />
               <span className="px-2 py-1 text-xs font-mono font-semibold bg-blue-500/20 text-blue-400 rounded">
                 {folder.prefix}
               </span>
@@ -135,12 +144,12 @@ export function DocFolderView() {
                       setIsEditingName(false);
                     }
                   }}
-                  className="text-2xl font-bold text-dark-text bg-transparent border-b border-blue-500 outline-none"
+                  className="text-lg md:text-2xl font-bold text-dark-text bg-transparent border-b border-blue-500 outline-none"
                   autoFocus
                 />
               ) : (
                 <h1
-                  className="text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors truncate"
+                  className="text-lg md:text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors truncate"
                   onClick={() => setIsEditingName(true)}
                 >
                   {folder.name}
@@ -198,7 +207,7 @@ export function DocFolderView() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
           {folderDocs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-16 h-16 rounded-full bg-dark-surface flex items-center justify-center mb-4">

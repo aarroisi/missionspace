@@ -20,6 +20,8 @@ interface MessageProps {
   onReply?: () => void;
   onQuote?: () => void;
   onQuotedClick?: (messageId: string) => void;
+  replyCount?: number;
+  onReplyCountClick?: () => void;
   className?: string;
   fileUpload?: {
     attachableType: string;
@@ -34,6 +36,8 @@ export function Message({
   onReply,
   onQuote,
   onQuotedClick,
+  replyCount,
+  onReplyCountClick,
   className,
   fileUpload,
 }: MessageProps) {
@@ -117,7 +121,7 @@ export function Message({
   return (
     <div
       className={clsx(
-        "flex gap-3 px-4 py-3 hover:bg-dark-surface/50 group relative",
+        "flex gap-3 px-4 py-3 md:px-6 md:py-4 hover:bg-dark-surface/50 group relative",
         className,
       )}
     >
@@ -198,6 +202,15 @@ export function Message({
             className="text-base text-dark-text mt-1 whitespace-pre-wrap break-words prose prose-invert prose-slate max-w-none"
             onMentionClick={handleMentionClick}
           />
+        )}
+
+        {replyCount != null && replyCount > 0 && onReplyCountClick && (
+          <button
+            onClick={onReplyCountClick}
+            className="mt-1 text-xs text-blue-400 hover:underline"
+          >
+            {replyCount} {replyCount === 1 ? "reply" : "replies"}
+          </button>
         )}
 
         {/* Action buttons - absolutely positioned to not take up space */}

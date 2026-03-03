@@ -13,12 +13,14 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { MobileBackButton } from "@/components/ui/MobileBackButton";
 import {
   DndContext,
   DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragStartEvent,
@@ -98,10 +100,10 @@ function SortableTaskRow({
         )}
         <span className="text-dark-text truncate">{task.title}</span>
       </div>
-      <div className="w-32 text-sm text-dark-text-muted text-right">
+      <div className="w-32 text-sm text-dark-text-muted text-right hidden md:block">
         {task.assignee?.name || "-"}
       </div>
-      <div className="w-32 text-sm text-dark-text-muted text-right">
+      <div className="w-32 text-sm text-dark-text-muted text-right hidden md:block">
         {task.dueOn ? new Date(task.dueOn).toLocaleDateString() : "-"}
       </div>
     </div>
@@ -144,12 +146,13 @@ function DroppableStatusSection({
 export function BoardView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { projectId } = useParams<{ projectId?: string }>();
+  const { projectId, id: boardIdParam } = useParams<{ projectId?: string; id?: string }>();
   const { activeItem } = useUIStore();
   const {
     boards,
     tasks,
     childTasks,
+    fetchBoards,
     fetchTasks,
     fetchChildTasks,
     createTask,
@@ -189,7 +192,7 @@ export function BoardView() {
     setSearchParams(newParams);
   };
 
-  const boardId = activeItem?.id;
+  const boardId = activeItem?.id || boardIdParam;
   const board = Array.isArray(boards)
     ? boards.find((b) => b.id === boardId)
     : undefined;
@@ -210,6 +213,12 @@ export function BoardView() {
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -312,6 +321,12 @@ export function BoardView() {
       reorderTask(taskId, targetStatusId, targetIndex);
     }
   };
+
+  useEffect(() => {
+    if (boardIdParam && (!Array.isArray(boards) || boards.length === 0)) {
+      fetchBoards();
+    }
+  }, [boardIdParam, boards, fetchBoards]);
 
   useEffect(() => {
     if (boardId) {
@@ -500,12 +515,12 @@ export function BoardView() {
                   Task
                 </span>
               </div>
-              <div className="w-32 text-right">
+              <div className="w-32 text-right hidden md:block">
                 <span className="text-xs font-medium text-dark-text-muted uppercase tracking-wide">
                   Assignee
                 </span>
               </div>
-              <div className="w-32 text-right">
+              <div className="w-32 text-right hidden md:block">
                 <span className="text-xs font-medium text-dark-text-muted uppercase tracking-wide">
                   Due Date
                 </span>
@@ -628,7 +643,9 @@ export function BoardView() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-      <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between">
+      <div className="px-4 py-3 md:px-6 md:py-4 border-b border-dark-border flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0">
+        <MobileBackButton to={projectId ? `/projects/${projectId}` : "/boards"} />
         {editingTitle ? (
           <div className="flex items-center gap-2">
             <input
@@ -645,7 +662,7 @@ export function BoardView() {
                   setEditingTitle(false);
                 }
               }}
-              className="text-2xl font-bold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none"
+              className="text-lg md:text-2xl font-bold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none"
             />
             <button
               onClick={handleTitleSave}
@@ -659,7 +676,7 @@ export function BoardView() {
           <div>
             <h1
               onClick={handleStartEditingTitle}
-              className="text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
+              className="text-lg md:text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
               title="Click to edit"
             >
               {board.name}
@@ -672,6 +689,7 @@ export function BoardView() {
             )}
           </div>
         )}
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsStatusManagerOpen(true)}

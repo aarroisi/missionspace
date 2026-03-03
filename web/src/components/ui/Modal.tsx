@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { X } from "lucide-react";
 import { clsx } from "clsx";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
 type ModalVariant = "surface" | "bg";
@@ -15,6 +16,7 @@ interface ModalProps {
   showCloseButton?: boolean;
   zIndex?: number;
   maxHeight?: string;
+  fullScreenOnMobile?: boolean;
 }
 
 const sizeClasses: Record<ModalSize, string> = {
@@ -37,30 +39,48 @@ export function Modal({
   showCloseButton = true,
   zIndex = 50,
   maxHeight,
+  fullScreenOnMobile = true,
 }: ModalProps) {
+  const isMobile = useIsMobile();
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
+  const mobileFullScreen = isMobile && fullScreenOnMobile;
+
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      className={clsx(
+        "fixed inset-0 bg-black/50 flex",
+        mobileFullScreen
+          ? "items-stretch"
+          : "items-center justify-center p-4",
+      )}
       style={{ zIndex }}
       onClick={handleBackdropClick}
     >
       <div
         className={clsx(
-          "border border-dark-border rounded-lg flex flex-col",
+          "flex flex-col",
           variant === "surface" ? "bg-dark-surface" : "bg-dark-bg",
-          sizeClasses[size],
-          className,
+          mobileFullScreen
+            ? "w-full h-full"
+            : clsx(
+                "border border-dark-border rounded-lg overflow-hidden",
+                sizeClasses[size],
+                className,
+              ),
         )}
-        style={{ maxHeight: maxHeight }}
+        style={{ maxHeight: mobileFullScreen ? undefined : maxHeight }}
       >
         {(title || showCloseButton) && (
-          <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between flex-shrink-0">
+          <div className={clsx(
+            "border-b border-dark-border flex items-center justify-between flex-shrink-0",
+            mobileFullScreen ? "px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]" : "px-6 py-4",
+          )}>
             {title && <h3 className="font-semibold text-dark-text">{title}</h3>}
             {showCloseButton && (
               <button

@@ -101,7 +101,6 @@ export function InnerSidebar() {
     const path = location.pathname;
 
     if (path === "/dashboard") return "home";
-    // All /projects/* routes (including nested /projects/:id/docs/:docId) are projects
     if (path.startsWith("/projects")) return "projects";
     if (path.startsWith("/boards")) return "boards";
     if (path.startsWith("/doc-folders") || path.startsWith("/docs"))
@@ -121,7 +120,7 @@ export function InnerSidebar() {
     // Handle nested project routes: /projects/:projectId/docs/:docId
     if (pathParts[0] === "projects" && pathParts.length >= 4) {
       const projectId = pathParts[1];
-      const itemType = pathParts[2]; // "docs", "boards", "channels"
+      const itemType = pathParts[2];
       const itemId = pathParts[3];
       if (itemId && itemId !== "new") {
         return {
@@ -169,7 +168,7 @@ export function InnerSidebar() {
 
     // Handle nested project routes: /projects/:projectId/docs/:docId
     if (pathParts[0] === "projects" && pathParts.length >= 4) {
-      const itemType = pathParts[2]; // "docs", "lists", "channels"
+      const itemType = pathParts[2];
       const itemId = pathParts[3];
       if (itemId && itemId !== "new") {
         setActiveItem({ type: itemType as Category, id: itemId });
@@ -195,7 +194,6 @@ export function InnerSidebar() {
   }, [location.pathname, setActiveItem]);
 
   // Helper to navigate to an item with guard check
-  // For project items, use nested URL: /projects/:projectId/docs/:docId
   const navigateToItem = async (
     type: string,
     id: string,
@@ -209,10 +207,8 @@ export function InnerSidebar() {
     setActiveItem({ type: type as any, id });
 
     if (projectId) {
-      // Nested project route
       navigate(`/projects/${projectId}/${type}/${id}`);
     } else {
-      // Regular route
       navigate(`/${type}/${id}`);
     }
   };
@@ -248,11 +244,9 @@ export function InnerSidebar() {
         setCreateDocFolderForProjectId(projectId);
         setShowCreateDocFolderModal(true);
       } else if (itemType === "board") {
-        // Show modal to get board name
         setCreateBoardForProjectId(projectId);
         setShowCreateBoardModal(true);
       } else if (itemType === "channel") {
-        // Create channel and add to project
         const channel = await createChannel("new-channel");
         await addItemToProject(projectId, "channel", channel.id);
         success("Channel created successfully");
@@ -273,7 +267,7 @@ export function InnerSidebar() {
     ? directMessages
     : [];
 
-  // Filter items without project for main views (use projectItemIds from above)
+  // Filter items without project for main views
   const workspaceBoards = safeBoards.filter(
     (b) => !projectItemIds.boardIds.has(b.id),
   );
@@ -310,9 +304,6 @@ export function InnerSidebar() {
   if (!sidebarOpen) return null;
 
   const handleCreateItem = async () => {
-    console.log("Creating item for category:", activeCategory);
-
-    // Check navigation guard before creating
     const { navigationGuard } = useUIStore.getState();
     if (navigationGuard) {
       const canNavigate = await navigationGuard();
@@ -366,13 +357,11 @@ export function InnerSidebar() {
     try {
       const board = await createBoard(name, prefix);
       if (createBoardForProjectId) {
-        // Add to project
         await addItemToProject(createBoardForProjectId, "board", board.id);
         success("Board created successfully");
         setShowCreateBoardModal(false);
         navigate(`/projects/${createBoardForProjectId}/boards/${board.id}`);
       } else {
-        // Standalone board
         success("Board created successfully");
         setShowCreateBoardModal(false);
         await navigateToItem("boards", board.id);
@@ -496,7 +485,6 @@ export function InnerSidebar() {
   const renderContent = () => {
     switch (activeCategory) {
       case "home":
-        // No inner sidebar for home
         return null;
 
       case "projects":

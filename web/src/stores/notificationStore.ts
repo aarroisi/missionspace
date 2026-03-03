@@ -8,8 +8,11 @@ interface NotificationState {
   isLoading: boolean;
   hasMore: boolean;
   afterCursor: string | null;
+  isOpen: boolean;
 
   // Operations
+  open: () => void;
+  close: () => void;
   fetchNotifications: (loadMore?: boolean) => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
@@ -23,6 +26,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   isLoading: false,
   hasMore: true,
   afterCursor: null,
+  isOpen: false,
+
+  open: () => set({ isOpen: true }),
+  close: () => set({ isOpen: false }),
 
   fetchNotifications: async (loadMore = false) => {
     const { afterCursor, isLoading } = get();

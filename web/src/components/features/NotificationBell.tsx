@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, BellOff, BellRing, CheckCheck } from "lucide-react";
+import { Bell, BellOff, BellRing, CheckCheck, X } from "lucide-react";
 import { clsx } from "clsx";
 import { formatDistanceToNow } from "date-fns";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useWebPush } from "@/hooks/useWebPush";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Avatar } from "@/components/ui/Avatar";
 import { Notification } from "@/types";
 
 export function NotificationBell() {
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
+  const isMobile = useIsMobile();
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -19,11 +20,19 @@ export function NotificationBell() {
     unreadCount,
     isLoading,
     hasMore,
+    isOpen,
+    open,
+    close,
     fetchNotifications,
     fetchUnreadCount,
     markAsRead,
     markAllAsRead,
   } = useNotificationStore();
+
+  const setIsOpen = (value: boolean) => {
+    if (value) open();
+    else close();
+  };
 
   // Fetch unread count on mount
   useEffect(() => {
@@ -208,95 +217,122 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div
-          ref={menuRef}
-          className="absolute left-full ml-2 bottom-0 w-80 bg-dark-surface border border-dark-border rounded-lg shadow-xl z-50 overflow-hidden"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border">
-            <h3 className="font-medium text-dark-text">Notifications</h3>
-            <div className="flex items-center gap-2">
-              <PushToggle />
-              {unreadCount > 0 && (
-                <button
-                  onClick={() => markAllAsRead()}
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                >
-                  <CheckCheck size={14} />
-                  Mark all read
-                </button>
+        <>
+          {isMobile && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setIsOpen(false)}
+            />
+          )}
+          <div
+            ref={menuRef}
+            className={clsx(
+              "bg-dark-surface overflow-hidden flex flex-col",
+              isMobile
+                ? "fixed inset-0 z-50"
+                : "absolute left-full ml-2 bottom-0 w-80 border border-dark-border rounded-lg shadow-xl z-50 max-h-[calc(100vh-2rem)]",
+            )}
+          >
+            {/* Header */}
+            <div className={clsx(
+              "flex items-center justify-between px-4 py-3 border-b border-dark-border flex-shrink-0",
+              isMobile && "pt-[max(0.75rem,env(safe-area-inset-top))]",
+            )}>
+              <h3 className="font-medium text-dark-text">Notifications</h3>
+              <div className="flex items-center gap-2">
+                <PushToggle />
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => markAllAsRead()}
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                  >
+                    <CheckCheck size={14} />
+                    Mark all read
+                  </button>
+                )}
+                {isMobile && (
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="text-dark-text-muted hover:text-dark-text ml-1"
+                  >
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Notification list */}
+            <div className={clsx(
+              "overflow-y-auto",
+              isMobile ? "flex-1" : "max-h-96",
+            )}>
+              {notifications.length === 0 && !isLoading ? (
+                <div className="px-4 py-8 text-center text-dark-text-muted">
+                  No notifications yet
+                </div>
+              ) : (
+                <>
+                  {notifications.map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={clsx(
+                        "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-dark-border/50 transition-colors",
+                        !notification.read && "bg-blue-500/5",
+                      )}
+                    >
+                      <div className="relative flex-shrink-0">
+                        <Avatar
+                          name={notification.actorName || "User"}
+                          src={notification.actorAvatar}
+                          size="sm"
+                        />
+                        {notification.type === "mention" && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black">
+                            @
+                          </div>
+                        )}
+                        {notification.type === "thread_reply" && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                            &#8617;
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-dark-text">
+                          <span className="font-medium">{notification.actorName}</span>{" "}
+                          {getNotificationLabel(notification)}
+                        </p>
+                        <p className="text-xs text-dark-text-muted mt-1">
+                          {formatDistanceToNow(
+                            new Date(notification.insertedAt),
+                            {
+                              addSuffix: true,
+                            },
+                          )}
+                        </p>
+                      </div>
+                      {!notification.read && (
+                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+
+                  {/* Load more */}
+                  {hasMore && (
+                    <button
+                      onClick={() => fetchNotifications(true)}
+                      disabled={isLoading}
+                      className="w-full px-4 py-3 text-sm text-blue-400 hover:text-blue-300 hover:bg-dark-border/50 transition-colors disabled:opacity-50"
+                    >
+                      {isLoading ? "Loading..." : "Load more"}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
-
-          {/* Notification list */}
-          <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 && !isLoading ? (
-              <div className="px-4 py-8 text-center text-dark-text-muted">
-                No notifications yet
-              </div>
-            ) : (
-              <>
-                {notifications.map((notification) => (
-                  <button
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={clsx(
-                      "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-dark-border/50 transition-colors",
-                      !notification.read && "bg-blue-500/5",
-                    )}
-                  >
-                    <div className="relative flex-shrink-0">
-                      <Avatar
-                        name={notification.actorName || "User"}
-                        src={notification.actorAvatar}
-                        size="sm"
-                      />
-                      {notification.type === "mention" && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black">
-                          @
-                        </div>
-                      )}
-                      {notification.type === "thread_reply" && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
-                          &#8617;
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-dark-text">
-                        <span className="font-medium">{notification.actorName}</span>{" "}
-                        {getNotificationLabel(notification)}
-                      </p>
-                      <p className="text-xs text-dark-text-muted mt-1">
-                        {formatDistanceToNow(
-                          new Date(notification.insertedAt),
-                          {
-                            addSuffix: true,
-                          },
-                        )}
-                      </p>
-                    </div>
-                    {!notification.read && (
-                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                    )}
-                  </button>
-                ))}
-
-                {/* Load more */}
-                {hasMore && (
-                  <button
-                    onClick={() => fetchNotifications(true)}
-                    disabled={isLoading}
-                    className="w-full px-4 py-3 text-sm text-blue-400 hover:text-blue-300 hover:bg-dark-border/50 transition-colors disabled:opacity-50"
-                  >
-                    {isLoading ? "Loading..." : "Load more"}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

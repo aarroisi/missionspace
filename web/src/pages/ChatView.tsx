@@ -6,6 +6,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { MoreHorizontal, Star, Trash2, Pencil, Check, Users } from "lucide-react";
+import { MobileBackButton } from "@/components/ui/MobileBackButton";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DiscussionView } from "@/components/features/DiscussionView";
@@ -31,6 +32,8 @@ export function ChatView() {
     channels,
     directMessages,
     messages,
+    fetchChannels,
+    fetchDirectMessages,
     fetchMessages,
     sendMessage,
     addMessage,
@@ -52,7 +55,7 @@ export function ChatView() {
   const { success, error: toastError } = useToastStore();
 
   // Determine entity type from URL path
-  const entityType = location.pathname.startsWith("/channels")
+  const entityType = location.pathname.includes("/channels")
     ? "channel"
     : "dm";
   const entityId = id;
@@ -64,6 +67,16 @@ export function ChatView() {
       : Array.isArray(directMessages)
         ? directMessages.find((d) => d.id === entityId)
         : undefined;
+
+  // Fetch channels/DMs if not loaded (e.g. direct URL navigation)
+  useEffect(() => {
+    if (entityType === "channel" && (!Array.isArray(channels) || channels.length === 0)) {
+      fetchChannels();
+    }
+    if (entityType === "dm" && (!Array.isArray(directMessages) || directMessages.length === 0)) {
+      fetchDirectMessages();
+    }
+  }, [entityType, channels, directMessages, fetchChannels, fetchDirectMessages]);
 
   // Set active item when component mounts or ID changes
   useEffect(() => {
@@ -202,10 +215,12 @@ export function ChatView() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-dark-border flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+          <MobileBackButton to={projectId ? `/projects/${projectId}` : "/channels"} />
           {isRenaming ? (
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-dark-text-muted">#</span>
+              <span className="text-lg md:text-2xl font-bold text-dark-text-muted">#</span>
               <input
                 ref={renameInputRef}
                 type="text"
@@ -213,7 +228,7 @@ export function ChatView() {
                 onChange={(e) => setRenameValue(slugify(e.target.value))}
                 onKeyDown={handleRenameKeyDown}
                 onBlur={handleRename}
-                className="text-2xl font-bold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none"
+                className="text-lg md:text-2xl font-bold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none"
               />
               <button
                 onClick={handleRename}
@@ -226,19 +241,20 @@ export function ChatView() {
           ) : entityType === "dm" ? (
             <div className="flex items-center gap-3">
               <Avatar name={item.name} src={"avatar" in item ? item.avatar : undefined} size="sm" online={"online" in item && item.online} />
-              <h1 className="text-2xl font-bold text-dark-text">
+              <h1 className="text-lg md:text-2xl font-bold text-dark-text">
                 {item.name}
               </h1>
             </div>
           ) : (
             <h1
-              className="text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
+              className="text-lg md:text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"
               onClick={handleStartRename}
               title="Click to rename"
             >
               # {item.name}
             </h1>
           )}
+          </div>
           <div className="flex items-center gap-3">
             {entityType === "channel" && entityId && (
               <SubscriptionSection itemType="channel" itemId={entityId} />
