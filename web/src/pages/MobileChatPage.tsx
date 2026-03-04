@@ -137,6 +137,9 @@ export function MobileChatPage() {
         <div className="px-4 pt-4 pb-1 text-xs font-semibold text-dark-text-muted uppercase tracking-wider">
           Direct Messages
         </div>
+        {allDmMembers.length === 0 && (
+          <div className="px-4 py-3 text-sm text-dark-text-muted">No conversations yet</div>
+        )}
         {allDmMembers.map((member) => {
           const isUnread = member.dmId ? unreadDmIds.has(member.dmId) : false;
           return (

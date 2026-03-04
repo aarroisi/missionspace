@@ -830,6 +830,11 @@ export function InnerSidebar() {
               Direct Messages
             </div>
             <div className="mt-1">
+              {allDmMembers.length === 0 && (
+                <p className="px-3 py-2 text-sm text-dark-text-muted">
+                  No conversations yet
+                </p>
+              )}
               {allDmMembers.map((member) => {
                 const isUnread = member.dmId ? unreadDmIds.has(member.dmId) : false;
                 return (

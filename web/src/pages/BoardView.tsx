@@ -141,6 +141,11 @@ function DroppableStatusSection({
           Drop here to move task
         </div>
       )}
+      {isEmpty && !isHighlighted && (
+        <div className="px-4 py-2 border-b border-dark-border text-dark-text-muted text-sm">
+          No tasks
+        </div>
+      )}
     </div>
   );
 }
@@ -629,10 +634,10 @@ export function BoardView() {
                   {activeTask.title}
                 </span>
               </div>
-              <div className="w-32 text-sm text-dark-text-muted text-right">
+              <div className="hidden md:block w-32 text-sm text-dark-text-muted text-right">
                 {activeTask.assignee?.name || "-"}
               </div>
-              <div className="w-32 text-sm text-dark-text-muted text-right">
+              <div className="hidden md:block w-32 text-sm text-dark-text-muted text-right">
                 {activeTask.dueOn
                   ? new Date(activeTask.dueOn).toLocaleDateString()
                   : "-"}

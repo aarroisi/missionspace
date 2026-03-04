@@ -132,6 +132,10 @@ export function KanbanColumn({
             )}
         </SortableContext>
 
+        {tasks.length === 0 && !isFirstColumn && (
+          <p className="text-sm text-dark-text-muted text-center py-4">No tasks yet</p>
+        )}
+
         {isFirstColumn && (
           <button
             onClick={() => onAddTask(id)}
