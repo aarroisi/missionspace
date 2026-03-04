@@ -1,6 +1,43 @@
 defmodule BridgeWeb.AuthControllerTest do
   use BridgeWeb.ConnCase
 
+  describe "login" do
+    setup %{conn: conn} do
+      workspace = insert(:workspace)
+
+      user =
+        insert(:user,
+          workspace_id: workspace.id,
+          email: "login@example.com",
+          password_hash: Bridge.Accounts.User.hash_password("password123")
+        )
+
+      conn = put_req_header(conn, "accept", "application/json")
+
+      {:ok, conn: conn, user: user}
+    end
+
+    test "sets a persistent session cookie", %{conn: conn, user: user} do
+      conn =
+        post(conn, ~p"/api/auth/login", %{
+          email: user.email,
+          password: "password123"
+        })
+
+      response = json_response(conn, 200)
+      assert response["user"]["id"] == user.id
+
+      session_cookie =
+        conn
+        |> get_resp_header("set-cookie")
+        |> Enum.find(&String.starts_with?(&1, "_bridge_key="))
+
+      assert session_cookie
+      assert session_cookie =~ ~r/max-age=1209600/i
+      assert session_cookie =~ ~r/expires=/i
+    end
+  end
+
   describe "update_me" do
     setup do
       workspace = insert(:workspace)

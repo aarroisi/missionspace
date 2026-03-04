@@ -47,6 +47,46 @@ interface AuthState {
   canDelete: (item: ItemWithCreator) => boolean;
 }
 
+const AUTH_ME_RETRY_ATTEMPTS = 1;
+const AUTH_ME_RETRY_DELAY_MS = 300;
+const RETRIABLE_AUTH_STATUS_CODES = [408, 429, 500, 502, 503, 504];
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchAuthMeWithRetry(): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= AUTH_ME_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, {
+        credentials: "include",
+      });
+
+      const shouldRetry =
+        RETRIABLE_AUTH_STATUS_CODES.includes(response.status) &&
+        attempt < AUTH_ME_RETRY_ATTEMPTS;
+
+      if (shouldRetry) {
+        await delay(AUTH_ME_RETRY_DELAY_MS);
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < AUTH_ME_RETRY_ATTEMPTS) {
+        await delay(AUTH_ME_RETRY_DELAY_MS);
+        continue;
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Auth check failed");
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   workspace: null,
@@ -92,9 +132,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   checkAuth: async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        credentials: "include",
-      });
+      const response = await fetchAuthMeWithRetry();
 
       if (response.ok) {
         const data = await response.json();
@@ -125,7 +163,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             isLoading: false,
           });
         }
-      } else {
+      } else if (response.status === 401) {
         localStorage.removeItem("logged_in");
         set({
           user: null,
@@ -135,17 +173,19 @@ export const useAuthStore = create<AuthState>((set) => ({
           needsEmailVerification: false,
           isLoading: false,
         });
+      } else {
+        console.warn(`Unexpected /auth/me status: ${response.status}`);
+        set((state) => ({
+          ...state,
+          isLoading: false,
+        }));
       }
     } catch (error) {
-      localStorage.removeItem("logged_in");
-      set({
-        user: null,
-        workspace: null,
-        members: [],
-        isAuthenticated: false,
-        needsEmailVerification: false,
+      console.warn("Auth check failed after retry:", error);
+      set((state) => ({
+        ...state,
         isLoading: false,
-      });
+      }));
     }
   },
 

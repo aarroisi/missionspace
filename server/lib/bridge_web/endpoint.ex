@@ -4,11 +4,13 @@ defmodule BridgeWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  @session_max_age 1_209_600
   @session_options [
     store: :cookie,
     key: "_bridge_key",
     signing_salt: "8dyTSuur",
-    same_site: "Lax"
+    same_site: "Lax",
+    max_age: @session_max_age
   ]
 
   socket("/live", Phoenix.LiveView.Socket,
@@ -35,7 +37,7 @@ defmodule BridgeWeb.Endpoint do
   )
 
   if Mix.env() == :dev do
-    plug Tidewave
+    plug(Tidewave)
   end
 
   # Code reloading can be explicitly enabled under the
