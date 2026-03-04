@@ -173,7 +173,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-dark-surface">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-dark-bg">
       {/* Workspace branding - centered like Basecamp */}
       <div className="flex flex-col items-center mb-6 md:mb-10">
         {logoUrl ? (
@@ -201,7 +201,7 @@ export function HomePage() {
               <div
                 key={item.id}
                 onClick={() => handleItemClick(item)}
-                className="p-4 bg-dark-bg border border-dark-border rounded-lg hover:border-blue-500 transition-colors cursor-pointer"
+                className="p-4 bg-dark-surface border border-dark-border rounded-lg hover:border-blue-500 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2 mb-2">
                   {item.type === "project" && (
@@ -263,7 +263,7 @@ export function HomePage() {
                     navigate(`/boards/${boardId}${taskParam}`);
                   }
                 }}
-                className="p-4 bg-dark-bg border border-dark-border rounded-lg hover:border-blue-500 transition-colors cursor-pointer"
+                className="p-4 bg-dark-surface border border-dark-border rounded-lg hover:border-blue-500 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Kanban size={16} className="text-blue-400" />
