@@ -60,5 +60,8 @@
     "vite-plugin-pwa": "^0.21.1",
     "workbox-precaching": "^7.3.0",
     "workbox-routing": "^7.3.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.57.0"
   }
 }
