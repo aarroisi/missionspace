@@ -209,7 +209,7 @@ export function SearchModal() {
   // Auto-focus input when modal opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 0);
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [isOpen]);
 

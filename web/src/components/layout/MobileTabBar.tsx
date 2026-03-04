@@ -63,9 +63,26 @@ export function MobileTabBar() {
       case "chat":
         navigate("/channels");
         break;
-      case "search":
+      case "search": {
+        // Create a temporary input and focus it synchronously within the tap handler
+        // to trigger the iOS keyboard. The SearchModal will transfer focus to the real input.
+        const tempInput = document.createElement("input");
+        tempInput.style.position = "fixed";
+        tempInput.style.top = "0";
+        tempInput.style.left = "0";
+        tempInput.style.opacity = "0";
+        tempInput.style.height = "0";
+        tempInput.style.fontSize = "16px";
+        document.body.appendChild(tempInput);
+        tempInput.focus();
+
         useSearchStore.getState().open();
+
+        requestAnimationFrame(() => {
+          tempInput.remove();
+        });
         break;
+      }
     }
   };
 
