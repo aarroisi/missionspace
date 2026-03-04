@@ -5,7 +5,14 @@ defmodule BridgeWeb.WorkspaceMemberControllerTest do
     setup do
       workspace = insert(:workspace)
       owner = insert(:user, workspace_id: workspace.id, role: "owner")
-      member = insert(:user, workspace_id: workspace.id, role: "member")
+
+      member =
+        insert(:user,
+          workspace_id: workspace.id,
+          role: "member",
+          timezone: "Asia/Kolkata"
+        )
+
       guest = insert(:user, workspace_id: workspace.id, role: "guest")
 
       conn =
@@ -32,6 +39,9 @@ defmodule BridgeWeb.WorkspaceMemberControllerTest do
       assert owner.id in user_ids
       assert member.id in user_ids
       assert guest.id in user_ids
+
+      member_data = Enum.find(response["data"], &(&1["id"] == member.id))
+      assert member_data["timezone"] == "Asia/Kolkata"
     end
 
     test "allows non-owners to view member list", %{conn: conn, member: member} do
@@ -46,6 +56,38 @@ defmodule BridgeWeb.WorkspaceMemberControllerTest do
 
       # Non-owners can view members
       assert is_list(response["data"])
+    end
+  end
+
+  describe "show" do
+    setup do
+      workspace = insert(:workspace)
+      owner = insert(:user, workspace_id: workspace.id, role: "owner")
+
+      member =
+        insert(:user,
+          workspace_id: workspace.id,
+          role: "member",
+          timezone: "Europe/Berlin"
+        )
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:user_id, owner.id)
+        |> put_req_header("accept", "application/json")
+
+      {:ok, conn: conn, workspace: workspace, member: member}
+    end
+
+    test "shows member details including timezone", %{conn: conn, member: member} do
+      response =
+        conn
+        |> get(~p"/api/workspace/members/#{member.id}")
+        |> json_response(200)
+
+      assert response["data"]["id"] == member.id
+      assert response["data"]["timezone"] == "Europe/Berlin"
     end
   end
 

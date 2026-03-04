@@ -19,6 +19,7 @@ interface WorkspaceMember {
   name: string;
   email: string;
   avatar: string;
+  timezone?: string | null;
   online: boolean;
 }
 
@@ -37,6 +38,7 @@ interface AuthState {
     name?: string;
     email?: string;
     avatar?: string;
+    timezone?: string;
   }) => Promise<void>;
   updateWorkspace: (data: { name?: string; slug?: string; logo?: string | null }) => Promise<void>;
   // Permission helpers
@@ -160,6 +162,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     name?: string;
     email?: string;
     avatar?: string;
+    timezone?: string;
   }) => {
     const response = await api.put<{ user: User }>("/auth/me", { user: data });
     set({ user: response.user });

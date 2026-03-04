@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   avatar: string;
+  timezone?: string | null;
   online: boolean;
   role: Role;
   isActive: boolean;

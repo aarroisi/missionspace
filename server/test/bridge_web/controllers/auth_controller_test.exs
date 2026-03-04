@@ -33,6 +33,15 @@ defmodule BridgeWeb.AuthControllerTest do
       assert response["user"]["email"] == "new@example.com"
     end
 
+    test "updates user timezone successfully", %{conn: conn} do
+      response =
+        conn
+        |> put(~p"/api/auth/me", user: %{timezone: "America/New_York"})
+        |> json_response(200)
+
+      assert response["user"]["timezone"] == "America/New_York"
+    end
+
     test "updates both name and email at once", %{conn: conn} do
       response =
         conn

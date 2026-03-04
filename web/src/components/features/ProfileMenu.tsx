@@ -50,12 +50,14 @@ export function ProfileMenu() {
           </div>
         </div>
 
-        <DropdownItem onClick={() => setIsProfileModalOpen(true)}>
-          <div className="flex items-center gap-2">
-            <User size={16} />
-            <span>Edit Profile</span>
-          </div>
-        </DropdownItem>
+        <div className="pt-1">
+          <DropdownItem onClick={() => setIsProfileModalOpen(true)}>
+            <div className="flex items-center gap-2">
+              <User size={16} />
+              <span>Edit Profile</span>
+            </div>
+          </DropdownItem>
+        </div>
 
         <DropdownDivider />
 

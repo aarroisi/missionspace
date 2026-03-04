@@ -9,6 +9,7 @@ defmodule Bridge.Accounts.User do
     field(:name, :string)
     field(:email, :string)
     field(:avatar, :string)
+    field(:timezone, :string)
     field(:online, :boolean, default: false)
     field(:password_hash, :string)
     field(:password, :string, virtual: true)
@@ -36,6 +37,7 @@ defmodule Bridge.Accounts.User do
       :name,
       :email,
       :avatar,
+      :timezone,
       :online,
       :workspace_id,
       :role,
@@ -44,15 +46,17 @@ defmodule Bridge.Accounts.User do
     ])
     |> validate_required([:name, :email])
     |> validate_format(:email, ~r/@/)
+    |> validate_length(:timezone, max: 100)
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:email)
   end
 
   def registration_changeset(user, attrs) do
     user
-    |> cast(attrs, [:name, :email, :password, :workspace_id, :role])
+    |> cast(attrs, [:name, :email, :password, :workspace_id, :role, :timezone])
     |> validate_required([:name, :email, :password, :workspace_id])
     |> validate_format(:email, ~r/@/)
+    |> validate_length(:timezone, max: 100)
     |> validate_length(:password, min: 6)
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:email)

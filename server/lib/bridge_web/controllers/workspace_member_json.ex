@@ -16,6 +16,7 @@ defmodule BridgeWeb.WorkspaceMemberJSON do
       email: user.email,
       role: user.role,
       avatar: user.avatar,
+      timezone: user.timezone,
       online: user.online,
       is_active: user.is_active,
       inserted_at: user.inserted_at,

@@ -23,6 +23,7 @@ defmodule BridgeWeb.AuthController do
             name: user.name,
             email: user.email,
             avatar: user.avatar,
+            timezone: user.timezone,
             role: user.role,
             workspace_id: workspace.id
           },
@@ -45,9 +46,10 @@ defmodule BridgeWeb.AuthController do
     case Accounts.authenticate_user(email, password) do
       {:ok, user} ->
         # Set session so resend-verification works
-        conn = conn
-        |> put_session(:user_id, user.id)
-        |> put_session(:workspace_id, user.workspace_id)
+        conn =
+          conn
+          |> put_session(:user_id, user.id)
+          |> put_session(:workspace_id, user.workspace_id)
 
         if is_nil(user.email_verified_at) do
           conn
@@ -61,6 +63,7 @@ defmodule BridgeWeb.AuthController do
               name: user.name,
               email: user.email,
               avatar: user.avatar,
+              timezone: user.timezone,
               role: user.role,
               workspace_id: user.workspace_id
             },
@@ -109,6 +112,7 @@ defmodule BridgeWeb.AuthController do
                   name: user.name,
                   email: user.email,
                   avatar: user.avatar,
+                  timezone: user.timezone,
                   role: user.role,
                   workspace_id: user.workspace_id
                 },
@@ -132,8 +136,8 @@ defmodule BridgeWeb.AuthController do
   def update_me(conn, %{"user" => user_params}) do
     current_user = conn.assigns.current_user
 
-    # Only allow updating name, email, and avatar
-    allowed_params = Map.take(user_params, ["name", "email", "avatar"])
+    # Only allow updating name, email, avatar, and timezone
+    allowed_params = Map.take(user_params, ["name", "email", "avatar", "timezone"])
 
     case Accounts.update_user(current_user, allowed_params) do
       {:ok, user} ->
@@ -145,6 +149,7 @@ defmodule BridgeWeb.AuthController do
             name: user.name,
             email: user.email,
             avatar: user.avatar,
+            timezone: user.timezone,
             role: user.role,
             workspace_id: user.workspace_id
           },

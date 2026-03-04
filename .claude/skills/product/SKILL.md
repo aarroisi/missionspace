@@ -38,6 +38,13 @@ All content created within a workspace belongs to the workspace, not individual 
 | **Member** | Regular team member           | Access to assigned projects only |
 | **Guest**  | Limited external collaborator | Access to one project only       |
 
+### Profile Time Zone
+
+- Users can optionally set a profile `timezone` using an IANA time zone value (for example: `America/New_York`).
+- Time zone is personal profile metadata only; it does not affect workspace-wide timestamps or storage behavior.
+- Time zone should be visible in member profile surfaces so teammates can understand working-hour context.
+- If no value is set, the profile is treated as "timezone not set."
+
 ### Member Deletion (Soft Delete)
 
 When a workspace member is removed:

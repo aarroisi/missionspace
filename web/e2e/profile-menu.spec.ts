@@ -60,6 +60,35 @@ test.describe("Profile Menu", () => {
     await expect(page.getByText("Updated Name")).toBeVisible();
   });
 
+  test("should save timezone from profile modal", async ({ page }) => {
+    const profileTrigger = page
+      .locator(".w-14")
+      .locator("button")
+      .filter({ has: page.locator(".rounded-full") })
+      .last();
+
+    await profileTrigger.click();
+    await page.getByText("Edit Profile").click();
+
+    const timezoneSelect = page.getByLabel("Time zone");
+    await expect(timezoneSelect).toHaveClass(/pr-10/);
+    await expect(
+      timezoneSelect.locator('option[value="America/New_York"]'),
+    ).toContainText(/GMT[+-]/);
+
+    await timezoneSelect.selectOption("America/New_York");
+    await page.getByRole("button", { name: "Save Changes" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "Edit Profile" }),
+    ).not.toBeVisible();
+
+    await profileTrigger.click();
+    await page.getByText("Edit Profile").click();
+
+    await expect(page.getByLabel("Time zone")).toHaveValue("America/New_York");
+  });
+
   test("should logout successfully", async ({ page }) => {
     // Open profile menu
     const profileTrigger = page
