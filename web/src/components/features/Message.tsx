@@ -118,6 +118,10 @@ export function Message({
     openMemberProfile(memberId);
   };
 
+  const handleAuthorClick = () => {
+    openMemberProfile(message.userId);
+  };
+
   return (
     <div
       className={clsx(
@@ -125,12 +129,24 @@ export function Message({
         className,
       )}
     >
-      <Avatar name={message.userName} src={message.avatar} size="sm" />
+      <button
+        type="button"
+        onClick={handleAuthorClick}
+        className="inline-flex rounded-full bg-transparent p-0 border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+        title={`Open ${message.userName}'s profile`}
+      >
+        <Avatar name={message.userName} src={message.avatar} size="sm" />
+      </button>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="font-semibold text-dark-text text-sm">
+          <button
+            type="button"
+            onClick={handleAuthorClick}
+            className="font-semibold text-dark-text text-sm hover:text-blue-400 transition-colors bg-transparent p-0 border-0"
+            title={`Open ${message.userName}'s profile`}
+          >
             {message.userName}
-          </span>
+          </button>
           <span className="text-xs text-dark-text-muted">
             {formatDistanceToNow(new Date(message.insertedAt), {
               addSuffix: true,

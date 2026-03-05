@@ -7,11 +7,13 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { useWebPush } from "@/hooks/useWebPush";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Avatar } from "@/components/ui/Avatar";
+import { useMemberProfile } from "@/contexts/MemberProfileContext";
 import { Notification } from "@/types";
 
 export function NotificationBell() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { openMemberProfile } = useMemberProfile();
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -280,13 +282,24 @@ export function NotificationBell() {
                         "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-dark-border/50 transition-colors",
                         !notification.read && "bg-blue-500/5",
                       )}
-                    >
-                      <div className="relative flex-shrink-0">
-                        <Avatar
-                          name={notification.actorName || "User"}
-                          src={notification.actorAvatar}
-                          size="sm"
-                        />
+                      >
+                        <div className="relative flex-shrink-0">
+                        <span
+                          className="inline-flex rounded-full"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (notification.actorId) {
+                              openMemberProfile(notification.actorId);
+                            }
+                          }}
+                          title={`Open ${(notification.actorName || "member") + "'s"} profile`}
+                        >
+                          <Avatar
+                            name={notification.actorName || "User"}
+                            src={notification.actorAvatar}
+                            size="sm"
+                          />
+                        </span>
                         {notification.type === "mention" && (
                           <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black">
                             @
@@ -300,7 +313,18 @@ export function NotificationBell() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-dark-text">
-                          <span className="font-medium">{notification.actorName}</span>{" "}
+                          <span
+                            className="font-medium hover:text-blue-400 transition-colors"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (notification.actorId) {
+                                openMemberProfile(notification.actorId);
+                              }
+                            }}
+                            title={`Open ${(notification.actorName || "member") + "'s"} profile`}
+                          >
+                            {notification.actorName}
+                          </span>{" "}
                           {getNotificationLabel(notification)}
                         </p>
                         <p className="text-xs text-dark-text-muted mt-1">

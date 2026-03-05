@@ -20,6 +20,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { Avatar } from "@/components/ui/Avatar";
+import { useMemberProfile } from "@/contexts/MemberProfileContext";
 import { Category } from "@/types";
 import { CreateProjectModal } from "@/components/features/CreateProjectModal";
 import { CreateBoardModal } from "@/components/features/CreateBoardModal";
@@ -34,6 +35,7 @@ export function InnerSidebar() {
   const collapsedSections = useUIStore((state) => state.collapsedSections);
   const toggleSection = useUIStore((state) => state.toggleSection);
   const { success, error } = useToastStore();
+  const { openMemberProfile } = useMemberProfile();
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
   const [showCreateDocFolderModal, setShowCreateDocFolderModal] =
@@ -854,8 +856,22 @@ export function InnerSidebar() {
                       isUnread && activeItemId !== member.dmId && "font-semibold text-dark-text",
                     )}
                   >
-                    <Avatar name={member.name} src={member.avatar} size="xs" online={member.online} />
-                    <span className="truncate flex-1">{member.name}</span>
+                    <span
+                      className="flex items-center gap-2 flex-1 min-w-0"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openMemberProfile(member.id);
+                      }}
+                      title={`Open ${member.name}'s profile`}
+                    >
+                      <Avatar
+                        name={member.name}
+                        src={member.avatar}
+                        size="xs"
+                        online={member.online}
+                      />
+                      <span className="truncate">{member.name}</span>
+                    </span>
                     {isUnread && activeItemId !== member.dmId && (
                       <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
                     )}

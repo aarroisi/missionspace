@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { CreateChannelModal } from "@/components/features/CreateChannelModal";
+import { useMemberProfile } from "@/contexts/MemberProfileContext";
 
 export function MobileChatPage() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export function MobileChatPage() {
   const createDirectMessage = useChatStore((s) => s.createDirectMessage);
   const currentUser = useAuthStore((s) => s.user);
   const workspaceMembers = useAuthStore((s) => s.members) || [];
+  const { openMemberProfile } = useMemberProfile();
   const { success, error } = useToastStore();
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
 
@@ -157,8 +159,22 @@ export function MobileChatPage() {
                 isUnread && "font-semibold",
               )}
             >
-              <Avatar name={member.name} src={member.avatar} size="xs" online={member.online} />
-              <span className="flex-1 truncate text-sm text-dark-text">{member.name}</span>
+              <span
+                className="flex items-center gap-3 flex-1 min-w-0"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openMemberProfile(member.id);
+                }}
+                title={`Open ${member.name}'s profile`}
+              >
+                <Avatar
+                  name={member.name}
+                  src={member.avatar}
+                  size="xs"
+                  online={member.online}
+                />
+                <span className="truncate text-sm text-dark-text">{member.name}</span>
+              </span>
               {isUnread && (
                 <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
               )}

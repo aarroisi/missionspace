@@ -18,6 +18,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useChannel } from "@/hooks/useChannel";
 import { SubscriptionSection } from "@/components/features/SubscriptionSection";
+import { useMemberProfile } from "@/contexts/MemberProfileContext";
 import { Message as MessageType } from "@/types";
 
 export function ChatView() {
@@ -52,6 +53,7 @@ export function ChatView() {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const { openMemberProfile } = useMemberProfile();
   const { success, error: toastError } = useToastStore();
 
   // Determine entity type from URL path
@@ -239,12 +241,21 @@ export function ChatView() {
               </button>
             </div>
           ) : entityType === "dm" ? (
-            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if ("userId" in item) {
+                  openMemberProfile(item.userId);
+                }
+              }}
+              className="flex items-center gap-3 bg-transparent border-0 p-0 hover:text-blue-400 transition-colors"
+              title={`Open ${item.name}'s profile`}
+            >
               <Avatar name={item.name} src={"avatar" in item ? item.avatar : undefined} size="sm" online={"online" in item && item.online} />
               <h1 className="text-lg md:text-2xl font-bold text-dark-text">
                 {item.name}
               </h1>
-            </div>
+            </button>
           ) : (
             <h1
               className="text-lg md:text-2xl font-bold text-dark-text cursor-pointer hover:text-blue-400 transition-colors"

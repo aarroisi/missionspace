@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useMemberProfile } from "@/contexts/MemberProfileContext";
 import {
   Dropdown,
   DropdownItem,
@@ -19,6 +20,7 @@ interface WorkspaceMember extends User {
 
 export function WorkspaceMembersPage() {
   const { user: currentUser } = useAuthStore();
+  const { openMemberProfile } = useMemberProfile();
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -118,7 +120,12 @@ export function WorkspaceMembersPage() {
             key={member.id}
             className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-dark-border last:border-b-0 items-center"
           >
-            <div className="col-span-5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => openMemberProfile(member.id)}
+              className="col-span-5 flex items-center gap-3 text-left rounded-lg -m-1 p-1 hover:bg-dark-hover transition-colors bg-transparent border-0"
+              title={`Open ${member.name}'s profile`}
+            >
               <Avatar name={member.name} src={member.avatar} size="md" />
               <div>
                 <div className="text-dark-text font-medium flex items-center gap-2">
@@ -131,7 +138,7 @@ export function WorkspaceMembersPage() {
                   {member.email}
                 </div>
               </div>
-            </div>
+            </button>
 
             <div className="col-span-3">
               <RoleBadge role={member.role} />

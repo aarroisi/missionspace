@@ -6,11 +6,13 @@ import { formatDistanceToNow } from "date-fns";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useWebPush } from "@/hooks/useWebPush";
 import { Avatar } from "@/components/ui/Avatar";
+import { useMemberProfile } from "@/contexts/MemberProfileContext";
 import { Notification } from "@/types";
 import { BellOff, BellRing } from "lucide-react";
 
 export function UpdatesPage() {
   const navigate = useNavigate();
+  const { openMemberProfile } = useMemberProfile();
   const {
     notifications,
     unreadCount,
@@ -185,11 +187,22 @@ export function UpdatesPage() {
                 )}
               >
                 <div className="relative flex-shrink-0">
-                  <Avatar
-                    name={notification.actorName || "User"}
-                    src={notification.actorAvatar}
-                    size="sm"
-                  />
+                  <span
+                    className="inline-flex rounded-full"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (notification.actorId) {
+                        openMemberProfile(notification.actorId);
+                      }
+                    }}
+                    title={`Open ${(notification.actorName || "member") + "'s"} profile`}
+                  >
+                    <Avatar
+                      name={notification.actorName || "User"}
+                      src={notification.actorAvatar}
+                      size="sm"
+                    />
+                  </span>
                   {notification.type === "mention" && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black">
                       @
@@ -203,7 +216,16 @@ export function UpdatesPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-dark-text">
-                    <span className="font-medium">
+                    <span
+                      className="font-medium hover:text-blue-400 transition-colors"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (notification.actorId) {
+                          openMemberProfile(notification.actorId);
+                        }
+                      }}
+                      title={`Open ${(notification.actorName || "member") + "'s"} profile`}
+                    >
                       {notification.actorName}
                     </span>{" "}
                     {getNotificationLabel(notification)}

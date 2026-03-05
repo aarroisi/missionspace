@@ -12,6 +12,35 @@ interface MemberProfileModalProps {
   memberId: string | null;
 }
 
+function formatTimezoneLabel(timezone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      timeZoneName: "shortOffset",
+    }).formatToParts(new Date());
+
+    const offset = parts.find((part) => part.type === "timeZoneName")?.value;
+    return offset ? `${timezone} (${offset})` : timezone;
+  } catch {
+    return timezone;
+  }
+}
+
+function formatLocalTime(now: Date, timezone: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: timezone,
+    }).format(now);
+  } catch {
+    return "Unavailable";
+  }
+}
+
 export function MemberProfileModal({
   isOpen,
   onClose,
@@ -20,6 +49,7 @@ export function MemberProfileModal({
   const [member, setMember] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     if (isOpen && memberId) {
@@ -42,6 +72,18 @@ export function MemberProfileModal({
       setMember(null);
     }
   }, [isOpen, memberId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setNow(new Date());
+
+    const interval = window.setInterval(() => {
+      setNow(new Date());
+    }, 1_000);
+
+    return () => window.clearInterval(interval);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -111,6 +153,26 @@ export function MemberProfileModal({
                   day: "numeric",
                   year: "numeric",
                 })}
+              </p>
+            </div>
+
+            {/* Timezone */}
+            <div className="pt-4 border-t border-dark-border space-y-1">
+              <p className="text-sm text-dark-text-muted">
+                Time zone{" "}
+                <span className="text-dark-text">
+                  {member.timezone
+                    ? formatTimezoneLabel(member.timezone)
+                    : "Not set"}
+                </span>
+              </p>
+              <p className="text-sm text-dark-text-muted">
+                Local time{" "}
+                <span className="text-dark-text">
+                  {member.timezone
+                    ? formatLocalTime(now, member.timezone)
+                    : "Unavailable"}
+                </span>
               </p>
             </div>
           </div>
