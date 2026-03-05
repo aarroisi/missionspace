@@ -233,6 +233,8 @@ export function ChatView() {
                 className="text-lg md:text-2xl font-bold text-dark-text bg-transparent border-b-2 border-blue-500 focus:outline-none"
               />
               <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={handleRename}
                 className="p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                 title="Save"
