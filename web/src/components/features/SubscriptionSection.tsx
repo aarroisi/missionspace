@@ -25,6 +25,7 @@ export function SubscriptionSection({
 
   const k = `${itemType}:${itemId}`;
   const subs = subscribers[k] || [];
+  const visibleSubs = subs.slice(0, 5);
   const isSubscribed = subscriptionStatus[k] ?? false;
   const loading = isLoading[k] ?? false;
 
@@ -50,14 +51,19 @@ export function SubscriptionSection({
           Subscribers ({subs.length})
         </span>
         <div className="flex -space-x-1.5">
-          {subs.slice(0, 5).map((sub) => (
-            <Avatar
+          {visibleSubs.map((sub, index) => (
+            <div
               key={sub.id}
-              name={sub.user?.name || "User"}
-              src={sub.user?.avatar}
-              size="xs"
-              className="ring-1 ring-dark-bg"
-            />
+              className="relative"
+              style={{ zIndex: visibleSubs.length - index }}
+            >
+              <Avatar
+                name={sub.user?.name || "User"}
+                src={sub.user?.avatar}
+                size="xs"
+                className="rounded-full overflow-hidden ring-1 ring-dark-bg bg-dark-bg"
+              />
+            </div>
           ))}
           {subs.length > 5 && (
             <div className="w-5 h-5 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-[9px] text-dark-text-muted">

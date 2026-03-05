@@ -46,7 +46,7 @@ export function MemberProfileModal({
   if (!isOpen) return null;
 
   return (
-    <Modal title="Member Profile" onClose={onClose} size="sm">
+    <Modal title="Member Profile" onClose={onClose} size="sm" zIndex={80}>
       <div className="p-6">
         {isLoading && (
           <div className="flex items-center justify-center py-8">

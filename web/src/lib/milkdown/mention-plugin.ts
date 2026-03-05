@@ -202,8 +202,8 @@ export const mentionAutocomplete = $prose((ctx: Ctx) => {
           event.key === "Tab"
         ) {
           // Let the popup handle these
-          const popup = state.popup;
-          if (popup) {
+          const popup = getPopupContainer();
+          if (popup.style.display !== "none") {
             const customEvent = new CustomEvent("mention-keydown", {
               detail: { key: event.key },
             });
@@ -275,14 +275,6 @@ function updatePopup(view: EditorView, ctx: Ctx) {
   const coords = view.coordsAtPos(view.state.selection.from);
   container.style.left = `${coords.left}px`;
   container.style.top = `${coords.bottom + 4}px`;
-
-  // Store popup ref in plugin state
-  view.dispatch(
-    view.state.tr.setMeta(mentionPluginKey, {
-      ...state,
-      popup: container,
-    }),
-  );
 
   // Render the mention list
   renderMentionList(container, filtered, view, ctx, state);

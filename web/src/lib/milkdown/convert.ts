@@ -119,9 +119,17 @@ export function htmlToMarkdown(html: string): string {
 export function markdownToHtml(markdown: string): string {
   if (!markdown || !markdown.trim()) return "";
 
-  // Handle mention syntax: @[Name](member:uuid) → <span class="mention" ...>
+  // Handle mention syntax in both legacy and standard markdown link forms:
+  // - Legacy:   @[Name](member:uuid)
+  // - Standard: [@Name](member:uuid)
+  // Convert both to a styled mention span before markdown parsing.
   let processed = markdown.replace(
     /@\[([^\]]+)\]\(member:([^)]+)\)/g,
+    '<span class="mention" data-type="mention" data-id="$2" data-label="$1">@$1</span>',
+  );
+
+  processed = processed.replace(
+    /\[@([^\]]+)\]\(member:([^)]+)\)/g,
     '<span class="mention" data-type="mention" data-id="$2" data-label="$1">@$1</span>',
   );
 
