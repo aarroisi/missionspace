@@ -33,14 +33,25 @@ if System.get_env("FROM_EMAIL") do
   config :missionspace, :from_email, System.get_env("FROM_EMAIL")
 end
 
-frontend_url = System.get_env("FRONTEND_URL")
+default_frontend_url =
+  case config_env() do
+    :prod -> "https://missionspace.co"
+    _ -> "http://localhost:5173"
+  end
 
-if frontend_url do
-  config :missionspace, :frontend_url, frontend_url
-end
+frontend_url = System.get_env("FRONTEND_URL", default_frontend_url)
+
+config :missionspace, :frontend_url, frontend_url
+
+default_origins =
+  if config_env() == :prod do
+    [frontend_url, "https://missionspace.co", "https://www.missionspace.co"]
+  else
+    [frontend_url]
+  end
 
 origins =
-  [frontend_url]
+  default_origins
   |> Enum.concat(
     case System.get_env("CORS_ORIGINS") do
       nil -> []
