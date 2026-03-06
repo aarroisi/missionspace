@@ -20,6 +20,16 @@ interface NotificationState {
   addNotification: (notification: Notification) => void;
 }
 
+function upsertNotification(
+  notifications: Notification[],
+  notification: Notification,
+): Notification[] {
+  return [
+    notification,
+    ...notifications.filter((existing) => existing.id !== notification.id),
+  ];
+}
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -100,9 +110,25 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   addNotification: (notification: Notification) => {
-    set((state) => ({
-      notifications: [notification, ...state.notifications],
-      unreadCount: state.unreadCount + (notification.read ? 0 : 1),
-    }));
+    set((state) => {
+      const existingNotification = state.notifications.find(
+        (item) => item.id === notification.id,
+      );
+
+      let unreadCount = state.unreadCount;
+
+      if (!existingNotification) {
+        unreadCount += notification.read ? 0 : 1;
+      } else if (existingNotification.read && !notification.read) {
+        unreadCount += 1;
+      } else if (!existingNotification.read && notification.read) {
+        unreadCount = Math.max(0, unreadCount - 1);
+      }
+
+      return {
+        notifications: upsertNotification(state.notifications, notification),
+        unreadCount,
+      };
+    });
   },
 }));

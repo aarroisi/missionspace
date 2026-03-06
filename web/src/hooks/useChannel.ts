@@ -25,6 +25,11 @@ export function useChannel(
 ): Channel | null {
   const [channel, setChannel] = useState<Channel | null>(null)
   const channelRef = useRef<Channel | null>(null)
+  const onMessageRef = useRef(onMessage)
+
+  useEffect(() => {
+    onMessageRef.current = onMessage
+  }, [onMessage])
 
   useEffect(() => {
     if (!topic) return
@@ -44,11 +49,9 @@ export function useChannel(
         console.error(`Unable to join ${topic}`, resp)
       })
 
-    if (onMessage) {
-      ch.onMessage = (event, payload) => {
-        onMessage(event, payload)
-        return payload
-      }
+    ch.onMessage = (event, payload) => {
+      onMessageRef.current?.(event, payload)
+      return payload
     }
 
     return () => {

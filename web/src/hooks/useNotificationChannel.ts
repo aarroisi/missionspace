@@ -2,6 +2,7 @@ import { useChannel } from "./useChannel";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
 import { Notification } from "@/types";
 
 /**
@@ -10,8 +11,9 @@ import { Notification } from "@/types";
  */
 export function useNotificationChannel() {
   const { user } = useAuthStore();
+  const activeItem = useUIStore((state) => state.activeItem);
   const { addNotification } = useNotificationStore();
-  const { addUnread } = useChatStore();
+  const { addUnread, markAsRead } = useChatStore();
 
   const topic = user ? `notifications:${user.id}` : "";
 
@@ -43,7 +45,16 @@ export function useNotificationChannel() {
       const itemType = payload.item_type;
       const itemId = payload.item_id;
       if (itemType === "channel" || itemType === "dm") {
-        addUnread(itemType, itemId);
+        const isActiveRoom =
+          ((itemType === "channel" && activeItem?.type === "channels") ||
+            (itemType === "dm" && activeItem?.type === "dms")) &&
+          activeItem?.id === itemId;
+
+        if (isActiveRoom && document.visibilityState === "visible" && document.hasFocus()) {
+          void markAsRead(itemType, itemId);
+        } else {
+          addUnread(itemType, itemId);
+        }
       }
     }
   });

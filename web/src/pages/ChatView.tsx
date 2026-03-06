@@ -20,6 +20,7 @@ import { useChannel } from "@/hooks/useChannel";
 import { SubscriptionSection } from "@/components/features/SubscriptionSection";
 import { useMemberProfile } from "@/contexts/MemberProfileContext";
 import { Message as MessageType } from "@/types";
+import { convertKeysToCamelCase } from "@/lib/api";
 
 export function ChatView() {
   const { id, projectId } = useParams<{ id: string; projectId?: string }>();
@@ -38,6 +39,8 @@ export function ChatView() {
     fetchMessages,
     sendMessage,
     addMessage,
+    upsertMessage,
+    removeMessage,
     hasMoreMessages,
     deleteChannel,
     updateChannel,
@@ -99,8 +102,32 @@ export function ChatView() {
 
   // Subscribe to channel for real-time updates
   useChannel(entityId ? `${entityType}:${entityId}` : "", (event, payload) => {
-    if (event === "new_message") {
-      addMessage(payload);
+    if (!entityId) {
+      return;
+    }
+
+    const normalizedPayload = convertKeysToCamelCase(payload) as {
+      message?: MessageType;
+      messageId?: string;
+    };
+
+    if (event === "new_message" && normalizedPayload.message) {
+      addMessage(normalizedPayload.message);
+
+      if (document.visibilityState === "visible" && document.hasFocus()) {
+        void markAsRead(entityType, entityId);
+      }
+
+      return;
+    }
+
+    if (event === "message_updated" && normalizedPayload.message) {
+      upsertMessage(normalizedPayload.message);
+      return;
+    }
+
+    if (event === "message_deleted" && normalizedPayload.messageId) {
+      removeMessage(normalizedPayload.messageId);
     }
   });
 

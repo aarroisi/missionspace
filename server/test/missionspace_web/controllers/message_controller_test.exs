@@ -211,6 +211,81 @@ defmodule MissionspaceWeb.MessageControllerTest do
 
       assert response["data"]["user_id"] == user.id
     end
+
+    test "broadcasts channel messages to the room topic", %{
+      conn: conn,
+      user: user,
+      channel: channel
+    } do
+      topic = "channel:#{channel.id}"
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      message_params = %{
+        text: "Hello, everyone!",
+        entity_type: "channel",
+        entity_id: channel.id
+      }
+
+      response =
+        conn
+        |> post(~p"/api/messages", message_params)
+        |> json_response(201)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "new_message",
+        payload: %{message: payload}
+      }
+
+      assert payload.id == response["data"]["id"]
+      assert payload.text == "Hello, everyone!"
+      assert payload.entity_type == "channel"
+      assert payload.entity_id == channel.id
+      assert payload.user_id == user.id
+      assert payload.user_name == user.name
+    end
+
+    test "broadcasts direct messages to the dm topic", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      other_user = insert(:user, workspace_id: workspace.id)
+
+      dm =
+        insert(:direct_message,
+          workspace_id: workspace.id,
+          user1_id: user.id,
+          user2_id: other_user.id
+        )
+
+      topic = "dm:#{dm.id}"
+
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      message_params = %{
+        text: "Hey there!",
+        entity_type: "dm",
+        entity_id: dm.id
+      }
+
+      response =
+        conn
+        |> post(~p"/api/messages", message_params)
+        |> json_response(201)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "new_message",
+        payload: %{message: payload}
+      }
+
+      assert payload.id == response["data"]["id"]
+      assert payload.text == "Hey there!"
+      assert payload.entity_type == "dm"
+      assert payload.entity_id == dm.id
+      assert payload.user_id == user.id
+    end
   end
 
   describe "show" do
@@ -325,6 +400,38 @@ defmodule MissionspaceWeb.MessageControllerTest do
       |> put(~p"/api/messages/00000000-0000-0000-0000-000000000000", update_params)
       |> json_response(404)
     end
+
+    test "broadcasts message updates to the room topic", %{
+      conn: conn,
+      user: user,
+      channel: channel
+    } do
+      message =
+        insert(:message,
+          entity_type: "channel",
+          entity_id: channel.id,
+          user_id: user.id,
+          text: "Old text"
+        )
+
+      topic = "channel:#{channel.id}"
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      response =
+        conn
+        |> put(~p"/api/messages/#{message.id}", %{text: "Updated text"})
+        |> json_response(200)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "message_updated",
+        payload: %{message: payload}
+      }
+
+      assert payload.id == message.id
+      assert payload.text == "Updated text"
+      assert DateTime.to_iso8601(payload.updated_at) == response["data"]["updated_at"]
+    end
   end
 
   describe "delete" do
@@ -368,6 +475,28 @@ defmodule MissionspaceWeb.MessageControllerTest do
       conn
       |> delete(~p"/api/messages/00000000-0000-0000-0000-000000000000")
       |> json_response(404)
+    end
+
+    test "broadcasts message deletions to the room topic", %{
+      conn: conn,
+      user: user,
+      channel: channel
+    } do
+      message = insert(:message, entity_type: "channel", entity_id: channel.id, user_id: user.id)
+      message_id = message.id
+      topic = "channel:#{channel.id}"
+
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      conn
+      |> delete(~p"/api/messages/#{message.id}")
+      |> response(204)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "message_deleted",
+        payload: %{message_id: ^message_id}
+      }
     end
   end
 end

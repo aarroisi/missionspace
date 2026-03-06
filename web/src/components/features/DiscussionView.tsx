@@ -60,6 +60,15 @@ export function DiscussionView({
   const [showJumpButton, setShowJumpButton] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior,
+      });
+    }
+  };
+
   // Messages are expected in asc order (oldest first) for display
   const topLevelMessages = messages.filter((m) => !m.parentId);
   const threadMessages = messages.filter((m) => m.parentId);
@@ -89,6 +98,36 @@ export function DiscussionView({
       }, 50);
     }
   }, [topLevelMessages.length]);
+
+  const previousLastMessageIdRef = useRef<string | null>(null);
+  const previousMessageCountRef = useRef<number | null>(null);
+  const lastTopLevelMessageId =
+    topLevelMessages.length > 0 ? topLevelMessages[topLevelMessages.length - 1].id : null;
+
+  useEffect(() => {
+    const previousLastMessageId = previousLastMessageIdRef.current;
+    const previousMessageCount = previousMessageCountRef.current;
+
+    previousLastMessageIdRef.current = lastTopLevelMessageId;
+    previousMessageCountRef.current = topLevelMessages.length;
+
+    if (!hasScrolledRef.current || previousMessageCount === null) {
+      return;
+    }
+
+    const receivedNewTopLevelMessage =
+      topLevelMessages.length > previousMessageCount &&
+      lastTopLevelMessageId !== null &&
+      previousLastMessageId !== lastTopLevelMessageId;
+
+    if (!receivedNewTopLevelMessage) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      scrollToBottom();
+    });
+  }, [lastTopLevelMessageId, topLevelMessages.length]);
 
   // Scroll to and highlight comment if highlightCommentId is provided
   const [, setSearchParams] = useSearchParams();
@@ -160,12 +199,7 @@ export function DiscussionView({
 
       // Scroll to bottom after comment is added
       setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({
-            top: scrollContainerRef.current.scrollHeight,
-            behavior: "smooth",
-          });
-        }
+        scrollToBottom();
       }, 100);
     } catch (err) {
       console.error("Failed to add comment:", err);
@@ -173,12 +207,7 @@ export function DiscussionView({
   };
 
   const handleJumpToBottom = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
+    scrollToBottom();
   };
 
   // Monitor scroll position

@@ -5,14 +5,17 @@ import { clsx } from "clsx";
 import { formatDistanceToNow } from "date-fns";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useWebPush } from "@/hooks/useWebPush";
+import { useRelativeTimeTicker } from "@/hooks/useRelativeTimeTicker";
 import { Avatar } from "@/components/ui/Avatar";
 import { useMemberProfile } from "@/contexts/MemberProfileContext";
+import { getNotificationActivityAt } from "@/lib/notifications";
 import { Notification } from "@/types";
 import { BellOff, BellRing } from "lucide-react";
 
 export function UpdatesPage() {
   const navigate = useNavigate();
   const { openMemberProfile } = useMemberProfile();
+  useRelativeTimeTicker();
   const {
     notifications,
     unreadCount,
@@ -231,7 +234,7 @@ export function UpdatesPage() {
                     {getNotificationLabel(notification)}
                   </p>
                   <p className="text-xs text-dark-text-muted mt-1">
-                    {formatDistanceToNow(new Date(notification.insertedAt), {
+                    {formatDistanceToNow(new Date(getNotificationActivityAt(notification)), {
                       addSuffix: true,
                     })}
                   </p>

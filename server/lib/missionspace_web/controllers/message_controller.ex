@@ -5,6 +5,7 @@ defmodule MissionspaceWeb.MessageController do
   alias Missionspace.Mentions
   alias Missionspace.Authorization.Policy
   alias Missionspace.Authorization.Scopes
+  alias MissionspaceWeb.MessageJSON
   import Plug.Conn
 
   action_fallback(MissionspaceWeb.FallbackController)
@@ -134,8 +135,9 @@ defmodule MissionspaceWeb.MessageController do
     }
 
     with {:ok, message} <- Chat.create_message(attrs) do
-      # Preload associations
-      message = Missionspace.Repo.preload(message, [:user, :parent, quote: [:user]])
+      message = preload_message(message)
+
+      broadcast_room_message(message, "new_message", %{message: MessageJSON.data(message)})
 
       # Create notifications for subscribers and mentioned users (async, don't block response)
       Task.start(fn ->
@@ -154,13 +156,36 @@ defmodule MissionspaceWeb.MessageController do
 
   def update(conn, params) do
     with {:ok, message} <- Chat.update_message(conn.assigns.message, params) do
+      message = preload_message(message)
+
+      broadcast_room_message(message, "message_updated", %{message: MessageJSON.data(message)})
+
       render(conn, :show, message: message)
     end
   end
 
   def delete(conn, _params) do
-    with {:ok, _message} <- Chat.delete_message(conn.assigns.message) do
+    message = conn.assigns.message
+
+    with {:ok, _message} <- Chat.delete_message(message) do
+      broadcast_room_message(message, "message_deleted", %{message_id: message.id})
+
       send_resp(conn, :no_content, "")
     end
   end
+
+  defp preload_message(message) do
+    Missionspace.Repo.preload(message, [:user, :parent, quote: [:user]])
+  end
+
+  defp broadcast_room_message(%{entity_type: entity_type, entity_id: entity_id}, event, payload) do
+    case room_topic(entity_type, entity_id) do
+      nil -> :ok
+      topic -> MissionspaceWeb.Endpoint.broadcast(topic, event, payload)
+    end
+  end
+
+  defp room_topic("channel", entity_id), do: "channel:#{entity_id}"
+  defp room_topic("dm", entity_id), do: "dm:#{entity_id}"
+  defp room_topic(_, _), do: nil
 end

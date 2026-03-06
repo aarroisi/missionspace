@@ -33,7 +33,8 @@ defmodule MissionspaceWeb.MessageJSON do
     %{errors: translate_errors(changeset)}
   end
 
-  defp data(%Message{} = message) do
+  @doc false
+  def data(%Message{} = message) do
     quote_data =
       if Ecto.assoc_loaded?(message.quote) and message.quote do
         %{

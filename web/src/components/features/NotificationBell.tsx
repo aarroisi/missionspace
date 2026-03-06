@@ -6,8 +6,10 @@ import { formatDistanceToNow } from "date-fns";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useWebPush } from "@/hooks/useWebPush";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useRelativeTimeTicker } from "@/hooks/useRelativeTimeTicker";
 import { Avatar } from "@/components/ui/Avatar";
 import { useMemberProfile } from "@/contexts/MemberProfileContext";
+import { getNotificationActivityAt } from "@/lib/notifications";
 import { Notification } from "@/types";
 
 export function NotificationBell() {
@@ -30,6 +32,8 @@ export function NotificationBell() {
     markAsRead,
     markAllAsRead,
   } = useNotificationStore();
+
+  useRelativeTimeTicker(isOpen);
 
   const setIsOpen = (value: boolean) => {
     if (value) open();
@@ -329,7 +333,7 @@ export function NotificationBell() {
                         </p>
                         <p className="text-xs text-dark-text-muted mt-1">
                           {formatDistanceToNow(
-                            new Date(notification.insertedAt),
+                            new Date(getNotificationActivityAt(notification)),
                             {
                               addSuffix: true,
                             },

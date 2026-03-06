@@ -138,6 +138,8 @@ Primary realtime API for app features is `/socket/websocket` with `MissionspaceW
 | `presence_state` | Phoenix Presence state |
 | `presence_diff` | Phoenix Presence diff |
 
+- `new_message`, `message_updated`, and `message_deleted` are emitted both for channel-originated chat events and for HTTP message create/update/delete requests against `/api/messages` when the message belongs to a channel or DM.
+
 ## `notifications:<user_id>` (`MissionspaceWeb.NotificationChannel`)
 
 ### Join

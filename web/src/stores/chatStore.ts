@@ -30,6 +30,48 @@ function transformDM(raw: RawDM): DirectMessage {
   };
 }
 
+function upsertMessageList(messages: Message[], message: Message): Message[] {
+  const existingIndex = messages.findIndex((item) => item.id === message.id);
+
+  if (existingIndex === -1) {
+    return [message, ...messages];
+  }
+
+  return messages.map((item) => (item.id === message.id ? message : item));
+}
+
+function upsertMessageRecord(
+  messagesByKey: Record<string, Message[]>,
+  message: Message,
+): Record<string, Message[]> {
+  const key = `${message.entityType}:${message.entityId}`;
+
+  return {
+    ...messagesByKey,
+    [key]: upsertMessageList(messagesByKey[key] || [], message),
+  };
+}
+
+function removeMessageFromRecord(
+  messagesByKey: Record<string, Message[]>,
+  messageId: string,
+): Record<string, Message[]> {
+  let changed = false;
+  const next: Record<string, Message[]> = {};
+
+  Object.entries(messagesByKey).forEach(([key, messages]) => {
+    const filtered = messages.filter((message) => message.id !== messageId);
+
+    if (filtered.length !== messages.length) {
+      changed = true;
+    }
+
+    next[key] = filtered;
+  });
+
+  return changed ? next : messagesByKey;
+}
+
 interface ChatState {
   channels: Channel[];
   directMessages: DirectMessage[];
@@ -72,6 +114,8 @@ interface ChatState {
   updateMessage: (id: string, text: string) => Promise<void>;
   deleteMessage: (id: string) => Promise<void>;
   addMessage: (message: Message) => void;
+  upsertMessage: (message: Message) => void;
+  removeMessage: (id: string) => void;
   hasMoreMessages: (entityType: string, entityId: string) => boolean;
 
   // Unread state
@@ -290,13 +334,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       parentId,
       quoteId,
     });
-    const key = `${entityType}:${entityId}`;
-    // Prepend new message since backend stores in desc order (newest first)
     set((state) => ({
-      messages: {
-        ...state.messages,
-        [key]: [message, ...(state.messages[key] || [])],
-      },
+      messages: upsertMessageRecord(state.messages, message),
     }));
     return message;
   },
@@ -305,42 +344,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const updatedMessage = await api.patch<Message>(`/messages/${id}`, {
       text,
     });
-    set((state) => {
-      const newMessages = { ...state.messages };
-      Object.keys(newMessages).forEach((key) => {
-        newMessages[key] = newMessages[key].map((m) =>
-          m.id === id
-            ? {
-                ...m,
-                text: updatedMessage.text,
-                updatedAt: updatedMessage.updatedAt,
-              }
-            : m,
-        );
-      });
-      return { messages: newMessages };
-    });
+    set((state) => ({
+      messages: upsertMessageRecord(state.messages, updatedMessage),
+    }));
   },
 
   deleteMessage: async (id: string) => {
     await api.delete(`/messages/${id}`);
-    set((state) => {
-      const newMessages = { ...state.messages };
-      Object.keys(newMessages).forEach((key) => {
-        newMessages[key] = newMessages[key].filter((m) => m.id !== id);
-      });
-      return { messages: newMessages };
-    });
+    set((state) => ({
+      messages: removeMessageFromRecord(state.messages, id),
+    }));
   },
 
   addMessage: (message: Message) => {
-    const key = `${message.entityType}:${message.entityId}`;
-    // Prepend new message since backend stores in desc order (newest first)
     set((state) => ({
-      messages: {
-        ...state.messages,
-        [key]: [message, ...(state.messages[key] || [])],
-      },
+      messages: upsertMessageRecord(state.messages, message),
+    }));
+  },
+
+  upsertMessage: (message: Message) => {
+    set((state) => ({
+      messages: upsertMessageRecord(state.messages, message),
+    }));
+  },
+
+  removeMessage: (id: string) => {
+    set((state) => ({
+      messages: removeMessageFromRecord(state.messages, id),
     }));
   },
 

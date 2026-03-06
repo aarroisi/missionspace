@@ -217,11 +217,13 @@ export function MobileTabBar() {
                   isActive ? "text-blue-400" : "text-dark-text-muted",
                 )}
               >
-                <Icon size={20} />
+                <span className="relative inline-flex">
+                  <Icon size={20} />
+                  {tab.id === "updates" && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </span>
                 <span className="text-[10px] leading-tight">{tab.label}</span>
-                {tab.id === "updates" && unreadCount > 0 && (
-                  <span className="absolute top-2 right-1/4 w-2 h-2 bg-red-500 rounded-full" />
-                )}
               </button>
             );
           })}

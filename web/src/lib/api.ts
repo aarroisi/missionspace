@@ -15,7 +15,7 @@ function toSnakeCase(str: string): string {
 }
 
 // Recursively convert object keys from snake_case to camelCase
-function convertKeysToCamelCase(obj: any): any {
+export function convertKeysToCamelCase(obj: any): any {
   if (Array.isArray(obj)) {
     return obj.map(convertKeysToCamelCase);
   } else if (obj !== null && typeof obj === "object") {

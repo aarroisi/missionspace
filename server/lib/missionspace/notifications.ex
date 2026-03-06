@@ -26,10 +26,13 @@ defmodule Missionspace.Notifications do
   def list_notifications(user_id, opts \\ []) do
     Notification
     |> where([n], n.user_id == ^user_id)
-    |> order_by([n], asc: n.read, desc: n.id)
+    |> order_by([n], asc: n.read, desc: n.updated_at, desc: n.id)
     |> preload([:user, :actor])
     |> Repo.paginate(
-      Keyword.merge([cursor_fields: [{:read, :asc}, {:id, :desc}], limit: 50], opts)
+      Keyword.merge(
+        [cursor_fields: [{:read, :asc}, {:updated_at, :desc}, {:id, :desc}], limit: 50],
+        opts
+      )
     )
   end
 
@@ -168,9 +171,7 @@ defmodule Missionspace.Notifications do
   def mark_as_read(id) do
     case get_notification(id) do
       {:ok, notification} ->
-        notification
-        |> Notification.mark_as_read_changeset()
-        |> Repo.update()
+        mark_notification_as_read(notification)
 
       {:error, :not_found} ->
         {:error, :not_found}
@@ -192,9 +193,7 @@ defmodule Missionspace.Notifications do
   def mark_as_read(id, user_id) do
     case get_notification(id, user_id) do
       {:ok, notification} ->
-        notification
-        |> Notification.mark_as_read_changeset()
-        |> Repo.update()
+        mark_notification_as_read(notification)
 
       {:error, :not_found} ->
         {:error, :not_found}
@@ -213,7 +212,7 @@ defmodule Missionspace.Notifications do
   def mark_all_as_read(user_id) do
     Notification
     |> where([n], n.user_id == ^user_id and n.read == false)
-    |> Repo.update_all(set: [read: true, updated_at: DateTime.utc_now()])
+    |> Repo.update_all(set: [read: true])
   end
 
   @doc """
@@ -265,5 +264,18 @@ defmodule Missionspace.Notifications do
     Notification
     |> where([n], n.user_id == ^user_id or n.actor_id == ^user_id)
     |> Repo.delete_all()
+  end
+
+  defp mark_notification_as_read(notification) do
+    {count, _} =
+      Notification
+      |> where([n], n.id == ^notification.id)
+      |> Repo.update_all(set: [read: true])
+
+    if count == 1 do
+      {:ok, %{notification | read: true}}
+    else
+      {:error, :not_found}
+    end
   end
 end
