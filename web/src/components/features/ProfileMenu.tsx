@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Code2, LogOut, User, UserPlus } from "lucide-react";
+import { Code2, LogOut, MoreHorizontal, User, UserPlus } from "lucide-react";
 import { DeviceAccount, useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { Avatar } from "@/components/ui/Avatar";
@@ -109,7 +109,7 @@ export function ProfileMenu() {
                 const isSignedOut = account.state === "signed_out";
 
                 return (
-                  <div key={account.user.id} className="rounded-md px-2 py-2 transition-colors hover:bg-dark-border/60">
+                  <div key={account.user.id} className="flex items-start gap-2 rounded-md px-2 py-2 transition-colors hover:bg-dark-border/60">
                     <button
                       type="button"
                       onClick={() => {
@@ -121,7 +121,7 @@ export function ProfileMenu() {
                         void handleSwitchAccount(account.user.id);
                       }}
                       disabled={switchingAccountId !== null}
-                      className="flex w-full items-center gap-2 text-left text-dark-text disabled:cursor-not-allowed disabled:opacity-60"
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left text-dark-text disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Avatar name={account.user.name} src={account.user.avatar} size="sm" />
                       <div className="min-w-0 flex-1">
@@ -140,24 +140,31 @@ export function ProfileMenu() {
                       )}
                     </button>
 
-                    <div className="mt-2 flex items-center justify-end gap-3 pl-8 text-xs">
-                      {!isSignedOut && (
+                    <Dropdown
+                      align="right"
+                      className="shrink-0"
+                      trigger={
                         <button
                           type="button"
-                          onClick={() => void handleAccountSignOut(account.user.id)}
-                          className="text-dark-text-muted transition-colors hover:text-dark-text"
+                          className="rounded-md p-1 text-dark-text-muted transition-colors hover:bg-dark-bg hover:text-dark-text"
+                          aria-label={`Account actions for ${account.user.email}`}
                         >
-                          Sign out
+                          <MoreHorizontal size={16} />
                         </button>
+                      }
+                    >
+                      {!isSignedOut && (
+                        <DropdownItem onClick={() => void handleAccountSignOut(account.user.id)}>
+                          Sign out
+                        </DropdownItem>
                       )}
-                      <button
-                        type="button"
+                      <DropdownItem
                         onClick={() => setAccountToRemove(account)}
-                        className="text-red-400 transition-colors hover:text-red-300"
+                        variant="danger"
                       >
                         Remove
-                      </button>
-                    </div>
+                      </DropdownItem>
+                    </Dropdown>
                   </div>
                 );
               })}
