@@ -286,6 +286,66 @@ defmodule MissionspaceWeb.MessageControllerTest do
       assert payload.entity_id == dm.id
       assert payload.user_id == user.id
     end
+
+    test "broadcasts doc comments to the doc topic", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      doc = insert_doc(workspace, user)
+      topic = "doc:#{doc.id}"
+
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      response =
+        conn
+        |> post(~p"/api/messages", %{text: "Doc comment", entity_type: "doc", entity_id: doc.id})
+        |> json_response(201)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "new_message",
+        payload: %{message: payload}
+      }
+
+      assert payload.id == response["data"]["id"]
+      assert payload.text == "Doc comment"
+      assert payload.entity_type == "doc"
+      assert payload.entity_id == doc.id
+      assert payload.user_id == user.id
+    end
+
+    test "broadcasts subtask comments to the task topic", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      %{child_task: child_task} = insert_subtask(workspace, user)
+      topic = "task:#{child_task.id}"
+
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      response =
+        conn
+        |> post(~p"/api/messages", %{
+          text: "Subtask comment",
+          entity_type: "task",
+          entity_id: child_task.id
+        })
+        |> json_response(201)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "new_message",
+        payload: %{message: payload}
+      }
+
+      assert payload.id == response["data"]["id"]
+      assert payload.text == "Subtask comment"
+      assert payload.entity_type == "task"
+      assert payload.entity_id == child_task.id
+      assert payload.user_id == user.id
+    end
   end
 
   describe "show" do
@@ -432,6 +492,40 @@ defmodule MissionspaceWeb.MessageControllerTest do
       assert payload.text == "Updated text"
       assert DateTime.to_iso8601(payload.updated_at) == response["data"]["updated_at"]
     end
+
+    test "broadcasts doc comment updates to the doc topic", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      doc = insert_doc(workspace, user)
+
+      message =
+        insert(:message,
+          entity_type: "doc",
+          entity_id: doc.id,
+          user_id: user.id,
+          text: "Old doc comment"
+        )
+
+      topic = "doc:#{doc.id}"
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      response =
+        conn
+        |> put(~p"/api/messages/#{message.id}", %{text: "Updated doc comment"})
+        |> json_response(200)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "message_updated",
+        payload: %{message: payload}
+      }
+
+      assert payload.id == message.id
+      assert payload.text == "Updated doc comment"
+      assert DateTime.to_iso8601(payload.updated_at) == response["data"]["updated_at"]
+    end
   end
 
   describe "delete" do
@@ -498,5 +592,82 @@ defmodule MissionspaceWeb.MessageControllerTest do
         payload: %{message_id: ^message_id}
       }
     end
+
+    test "broadcasts doc comment deletions to the doc topic", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      doc = insert_doc(workspace, user)
+      message = insert(:message, entity_type: "doc", entity_id: doc.id, user_id: user.id)
+      message_id = message.id
+      topic = "doc:#{doc.id}"
+
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      conn
+      |> delete(~p"/api/messages/#{message.id}")
+      |> response(204)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "message_deleted",
+        payload: %{message_id: ^message_id}
+      }
+    end
+
+    test "broadcasts subtask comment deletions to the task topic", %{
+      conn: conn,
+      user: user,
+      workspace: workspace
+    } do
+      %{child_task: child_task} = insert_subtask(workspace, user)
+      message = insert(:message, entity_type: "task", entity_id: child_task.id, user_id: user.id)
+      message_id = message.id
+      topic = "task:#{child_task.id}"
+
+      Phoenix.PubSub.subscribe(Missionspace.PubSub, topic)
+
+      conn
+      |> delete(~p"/api/messages/#{message.id}")
+      |> response(204)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^topic,
+        event: "message_deleted",
+        payload: %{message_id: ^message_id}
+      }
+    end
+  end
+
+  defp insert_doc(workspace, user) do
+    folder = insert(:doc_folder, workspace_id: workspace.id, created_by_id: user.id)
+    insert(:doc, workspace_id: workspace.id, author_id: user.id, doc_folder_id: folder.id)
+  end
+
+  defp insert_task(workspace, user, attrs \\ %{}) do
+    list = insert(:list, workspace_id: workspace.id, created_by_id: user.id)
+    status = insert(:list_status, list_id: list.id, position: 0)
+
+    insert(
+      :task,
+      Map.merge(
+        %{list_id: list.id, status_id: status.id, created_by_id: user.id},
+        attrs
+      )
+    )
+  end
+
+  defp insert_subtask(workspace, user) do
+    parent_task = insert_task(workspace, user)
+
+    child_task =
+      insert_task(workspace, user, %{
+        list_id: parent_task.list_id,
+        status_id: parent_task.status_id,
+        parent_id: parent_task.id
+      })
+
+    %{parent_task: parent_task, child_task: child_task}
   end
 end

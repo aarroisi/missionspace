@@ -74,7 +74,12 @@ Primary realtime API for app features is `/socket/websocket` with `MissionspaceW
 | `status_updated` | `{ "task_id": "uuid", "status": "...", "task": Task }` |
 | `task_updated` | `{ "task": Task }` |
 | `comment_added` | `{ "comment": Message, "task_id": "uuid" }` |
+| `new_message` | `{ "message": Message }` |
+| `message_deleted` | `{ "message_id": "uuid" }` |
+| `message_updated` | `{ "message": Message }` |
 | `user_assigned` | `{ "task_id": "uuid", "assignee": User, "task": Task }` |
+
+- `new_message`, `message_updated`, and `message_deleted` are emitted for HTTP message create/update/delete requests against `/api/messages` when the message belongs to the task or subtask represented by the topic.
 
 ## `doc:<doc_id>` (`MissionspaceWeb.DocChannel`)
 
@@ -100,7 +105,12 @@ Primary realtime API for app features is `/socket/websocket` with `MissionspaceW
 | `content_updated` | `{ "doc_id": "uuid", "content": "...", "updated_by": "user_id", "doc": Doc }` |
 | `title_updated` | `{ "doc_id": "uuid", "title": "...", "doc": Doc }` |
 | `comment_added` | `{ "comment": Message, "doc_id": "uuid" }` |
+| `new_message` | `{ "message": Message }` |
+| `message_deleted` | `{ "message_id": "uuid" }` |
+| `message_updated` | `{ "message": Message }` |
 | `cursor_moved` | `{ "user_id": "uuid", "position": ..., "doc_id": "uuid" }` |
+
+- `new_message`, `message_updated`, and `message_deleted` are emitted for HTTP message create/update/delete requests against `/api/messages` when the message belongs to the doc represented by the topic.
 
 ## `channel:<channel_id>` and `dm:<dm_id>` (`MissionspaceWeb.ChatChannel`)
 

@@ -187,5 +187,7 @@ defmodule MissionspaceWeb.MessageController do
 
   defp room_topic("channel", entity_id), do: "channel:#{entity_id}"
   defp room_topic("dm", entity_id), do: "dm:#{entity_id}"
+  defp room_topic("doc", entity_id), do: "doc:#{entity_id}"
+  defp room_topic("task", entity_id), do: "task:#{entity_id}"
   defp room_topic(_, _), do: nil
 end

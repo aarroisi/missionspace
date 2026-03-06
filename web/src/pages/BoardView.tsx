@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { MobileBackButton } from "@/components/ui/MobileBackButton";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useMessageChannel } from "@/hooks/useMessageChannel";
 import {
   DndContext,
   DragOverlay,
@@ -198,6 +199,9 @@ export function BoardView() {
   const taskParam = searchParams.get("task");
   const subtaskParam = searchParams.get("subtask");
   const highlightCommentId = searchParams.get("comment");
+
+  useMessageChannel(taskParam ? `task:${taskParam}` : "");
+  useMessageChannel(subtaskParam ? `task:${subtaskParam}` : "");
 
   const setViewMode = (mode: "board" | "table") => {
     const newParams = new URLSearchParams(searchParams);

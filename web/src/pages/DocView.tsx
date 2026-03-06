@@ -29,6 +29,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useMessageChannel } from "@/hooks/useMessageChannel";
 import { SubscriptionSection } from "@/components/features/SubscriptionSection";
 import { Message as MessageType } from "@/types";
 
@@ -77,6 +78,7 @@ export function DocView() {
   const commentEditorRef = useRef<HTMLTextAreaElement>(null);
   const editorHandleRef = useRef<RichTextEditorHandle | null>(null);
   const doc = isNewDoc ? null : docs.find((d) => d.id === docId);
+  useMessageChannel(docId && !isNewDoc ? `doc:${docId}` : "");
   const folderId = folderIdParam || doc?.docFolderId;
   const rawDocComments =
     docId && !isNewDoc && Array.isArray(messages[`doc:${docId}`])

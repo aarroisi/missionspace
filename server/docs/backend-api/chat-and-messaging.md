@@ -142,7 +142,7 @@ Entity types: `task`, `doc`, `channel`, `dm`.
 
 - Authorization behavior:
   - Validates user can comment on target entity when type/id are valid.
-  - For `channel` and `dm` messages, also broadcasts `new_message` on the matching realtime room topic.
+  - For `task`, `doc`, `channel`, and `dm` messages, also broadcasts `new_message` on the matching realtime room topic.
 - Response `201`: `{"data": Message}`
 - Errors: `403`, `422`
 
@@ -155,14 +155,14 @@ Entity types: `task`, `doc`, `channel`, `dm`.
 
 - Update permission: message author only.
 - Request body: message fields accepted by changeset (`text`, `entity_type`, etc.)
-- For `channel` and `dm` messages, also broadcasts `message_updated` on the matching realtime room topic.
+- For `task`, `doc`, `channel`, and `dm` messages, also broadcasts `message_updated` on the matching realtime room topic.
 - Response `200`: `{"data": Message}`
 - Errors: `403`, `404`, `422`
 
 ### DELETE `/api/messages/:id`
 
 - Delete permission: message author, or workspace owner.
-- For `channel` and `dm` messages, also broadcasts `message_deleted` on the matching realtime room topic.
+- For `task`, `doc`, `channel`, and `dm` messages, also broadcasts `message_deleted` on the matching realtime room topic.
 - Response `204`
 - Errors: `403`, `404`
 
