@@ -387,7 +387,7 @@ MIT License - see LICENSE file for details
 For issues and questions:
 
 - GitHub Issues: https://github.com/yourusername/missionspace/issues
-- Documentation: See .codex/PRD.md and .codex/AGENTS.md
+- Documentation: See .codex/AGENTS.md
 
 ---
 

@@ -276,7 +276,6 @@ npm run typecheck
 
 - Check the main README.md for API documentation
 - See .codex/AGENTS.md for code conventions
-- See .codex/PRD.md for feature specifications
 - Check the Phoenix docs: https://hexdocs.pm/phoenix
 - Check the React docs: https://react.dev
 

@@ -6,32 +6,32 @@ Users can mention other workspace members inside any text editor using `@Name`. 
 
 ## Current State
 
-The mention system is largely implemented. This PRD documents the full feature and identifies remaining gaps.
+The mention system is largely implemented. This documents the full feature and identifies remaining gaps.
 
 ### What Exists
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Mention autocomplete plugin | Done | `@` trigger, keyboard nav, member filtering |
-| MentionList dropdown UI | Done | Shows avatar, name, email, online status |
-| Markdown serialization | Done | `@[Name](member:uuid)` format |
-| HTML rendering | Done | `<span class="mention" data-id data-label>@Name</span>` |
-| ContentRenderer mention display | Done | Clickable mention spans |
-| Backend mention extraction | Done | Parses `data-id` from HTML content |
-| Notification creation | Done | Separate "mention" type, never rolled up |
-| Real-time notification delivery | Done | Phoenix channels + web push |
-| Auto-subscription on mention | Done | Mentioned user subscribed to item |
-| Doc content editor mentions | Done | DocView passes mentions prop |
-| Comment editor mentions | Done | CommentEditor in docs, tasks, channels |
-| Message edit mentions | Done | Message.tsx inline editing |
+| Component                       | Status | Notes                                                   |
+| ------------------------------- | ------ | ------------------------------------------------------- |
+| Mention autocomplete plugin     | Done   | `@` trigger, keyboard nav, member filtering             |
+| MentionList dropdown UI         | Done   | Shows avatar, name, email, online status                |
+| Markdown serialization          | Done   | `@[Name](member:uuid)` format                           |
+| HTML rendering                  | Done   | `<span class="mention" data-id data-label>@Name</span>` |
+| ContentRenderer mention display | Done   | Clickable mention spans                                 |
+| Backend mention extraction      | Done   | Parses `data-id` from HTML content                      |
+| Notification creation           | Done   | Separate "mention" type, never rolled up                |
+| Real-time notification delivery | Done   | Phoenix channels + web push                             |
+| Auto-subscription on mention    | Done   | Mentioned user subscribed to item                       |
+| Doc content editor mentions     | Done   | DocView passes mentions prop                            |
+| Comment editor mentions         | Done   | CommentEditor in docs, tasks, channels                  |
+| Message edit mentions           | Done   | Message.tsx inline editing                              |
 
 ### Gaps (To Implement)
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Task notes editor mentions | Missing | `RichTextNotesEditor` doesn't pass mentions prop |
-| Child task notes editor mentions | Missing | Same gap in `ChildTaskDetailModal` |
-| Task notes mention notification | Verify | Backend may not extract mentions on task note save |
+| Component                        | Status  | Notes                                              |
+| -------------------------------- | ------- | -------------------------------------------------- |
+| Task notes editor mentions       | Missing | `RichTextNotesEditor` doesn't pass mentions prop   |
+| Child task notes editor mentions | Missing | Same gap in `ChildTaskDetailModal`                 |
+| Task notes mention notification  | Verify  | Backend may not extract mentions on task note save |
 
 ## How It Works
 
@@ -53,6 +53,7 @@ Mentions are stored as markdown links:
 ```
 
 This format:
+
 - Survives content sanitization
 - Preserves the mention even if user is later deactivated
 - Is parsed by remark into a `mention` MDAST node
@@ -63,7 +64,9 @@ This format:
 In both the editor and read-only views, mentions render as:
 
 ```html
-<span class="mention" data-type="mention" data-id="uuid" data-label="Jane Smith">@Jane Smith</span>
+<span class="mention" data-type="mention" data-id="uuid" data-label="Jane Smith"
+  >@Jane Smith</span
+>
 ```
 
 Styled with a distinct background color to stand out from regular text. Clickable — triggers `onMentionClick` callback (currently navigates to profile or no-op depending on context).
@@ -92,17 +95,17 @@ When content containing mentions is saved:
 
 All places where users can write markdown content:
 
-| Location | Editor Component | Mentions |
-|----------|-----------------|----------|
-| Doc content | RichTextEditor in DocView | Yes |
-| Doc comments | CommentEditor | Yes |
-| Task comments | CommentEditor | Yes |
-| Task notes/description | RichTextNotesEditor in TaskDetailModal | **Gap** |
-| Child task notes | RichTextNotesEditor in ChildTaskDetailModal | **Gap** |
-| Channel messages | CommentEditor | Yes |
-| DM messages | CommentEditor | Yes |
-| Thread replies | CommentEditor | Yes |
-| Message editing | RichTextEditor in Message | Yes |
+| Location               | Editor Component                            | Mentions |
+| ---------------------- | ------------------------------------------- | -------- |
+| Doc content            | RichTextEditor in DocView                   | Yes      |
+| Doc comments           | CommentEditor                               | Yes      |
+| Task comments          | CommentEditor                               | Yes      |
+| Task notes/description | RichTextNotesEditor in TaskDetailModal      | **Gap**  |
+| Child task notes       | RichTextNotesEditor in ChildTaskDetailModal | **Gap**  |
+| Channel messages       | CommentEditor                               | Yes      |
+| DM messages            | CommentEditor                               | Yes      |
+| Thread replies         | CommentEditor                               | Yes      |
+| Message editing        | RichTextEditor in Message                   | Yes      |
 
 ## Entity Relationships
 
