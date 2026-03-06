@@ -19,8 +19,9 @@ defmodule MissionspaceWeb.Endpoint do
   )
 
   socket("/socket", MissionspaceWeb.UserSocket,
-    websocket: [connect_info: [session: @session_options]],
-    longpoll: false
+    websocket: true,
+    longpoll: false,
+    auth_token: true
   )
 
   # Serve at "/" the static files from "priv/static" directory.

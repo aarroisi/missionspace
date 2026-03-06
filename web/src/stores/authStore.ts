@@ -163,6 +163,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (response.ok) {
         const data = await response.json();
+        api.setToken(data.token);
         localStorage.setItem("logged_in", "1");
         set({
           user: data.user,
@@ -174,6 +175,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else if (response.status === 403) {
         const data = await response.json();
         disconnectSocket();
+        api.clearToken();
         localStorage.removeItem("logged_in");
         if (data.error === "email_not_verified") {
           set({
@@ -196,6 +198,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       } else if (response.status === 401) {
         disconnectSocket();
+        api.clearToken();
         localStorage.removeItem("logged_in");
         set({
           user: null,
@@ -235,11 +238,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   switchAccount: async (userId: string) => {
-    const data = await api.post<{ user: User; workspace: Workspace }>("/auth/switch-account", {
+    const data = await api.post<{ user: User; workspace: Workspace; token: string }>("/auth/switch-account", {
       userId,
     });
 
     disconnectSocket();
+    api.setToken(data.token);
     localStorage.setItem("logged_in", "1");
     set({
       user: data.user,
@@ -259,12 +263,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   reauthAccount: async (userId: string, password: string) => {
-    const data = await api.post<{ user: User; workspace: Workspace }>("/auth/reauth-account", {
+    const data = await api.post<{ user: User; workspace: Workspace; token: string }>("/auth/reauth-account", {
       userId,
       password,
     });
 
     disconnectSocket();
+    api.setToken(data.token);
     localStorage.setItem("logged_in", "1");
     set({
       user: data.user,

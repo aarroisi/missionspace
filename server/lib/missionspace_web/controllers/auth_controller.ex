@@ -320,7 +320,8 @@ defmodule MissionspaceWeb.AuthController do
   defp auth_payload(user, workspace) do
     %{
       user: user_payload(user),
-      workspace: workspace_payload(workspace)
+      workspace: workspace_payload(workspace),
+      token: Phoenix.Token.sign(MissionspaceWeb.Endpoint, "user socket", user.id)
     }
   end
 

@@ -29,6 +29,11 @@ defmodule MissionspaceWeb.AuthControllerTest do
       response = json_response(conn, 200)
       assert response["user"]["id"] == user.id
 
+      assert {:ok, verified_user_id} =
+               Phoenix.Token.verify(MissionspaceWeb.Endpoint, "user socket", response["token"])
+
+      assert verified_user_id == user.id
+
       session_cookie =
         conn
         |> get_resp_header("set-cookie")
@@ -156,6 +161,12 @@ defmodule MissionspaceWeb.AuthControllerTest do
 
       response = json_response(conn, 200)
       assert response["user"]["id"] == user_2.id
+
+      assert {:ok, verified_user_id} =
+               Phoenix.Token.verify(MissionspaceWeb.Endpoint, "user socket", response["token"])
+
+      assert verified_user_id == user_2.id
+
       assert get_session(conn, :user_id) == user_2.id
       assert get_session(conn, :workspace_id) == user_2.workspace_id
       assert get_session(conn, :current_device_account_id) == account_2.id
@@ -399,6 +410,12 @@ defmodule MissionspaceWeb.AuthControllerTest do
 
       response = json_response(conn, 200)
       assert response["user"]["id"] == user.id
+
+      assert {:ok, verified_user_id} =
+               Phoenix.Token.verify(MissionspaceWeb.Endpoint, "user socket", response["token"])
+
+      assert verified_user_id == user.id
+
       assert get_session(conn, :user_id) == user.id
       assert get_session(conn, :current_device_account_id)
 

@@ -55,7 +55,8 @@
 ```json
 {
   "user": "AuthUser",
-  "workspace": "WorkspaceSummary"
+  "workspace": "WorkspaceSummary",
+  "token": "phoenix-channel-auth-token"
 }
 ```
 
@@ -83,7 +84,8 @@
 ```json
 {
   "user": "AuthUser",
-  "workspace": "WorkspaceSummary"
+  "workspace": "WorkspaceSummary",
+  "token": "phoenix-channel-auth-token"
 }
 ```
 
@@ -112,7 +114,8 @@
 ```json
 {
   "user": "AuthUser",
-  "workspace": "WorkspaceSummary"
+  "workspace": "WorkspaceSummary",
+  "token": "phoenix-channel-auth-token"
 }
 ```
 
@@ -174,7 +177,8 @@
 ```json
 {
   "user": "AuthUser",
-  "workspace": "WorkspaceSummary"
+  "workspace": "WorkspaceSummary",
+  "token": "phoenix-channel-auth-token"
 }
 ```
 
@@ -232,7 +236,8 @@
 ```json
 {
   "user": "AuthUser",
-  "workspace": "WorkspaceSummary"
+  "workspace": "WorkspaceSummary",
+  "token": "phoenix-channel-auth-token"
 }
 ```
 
@@ -298,7 +303,8 @@
 ```json
 {
   "user": "AuthUser",
-  "workspace": "WorkspaceSummary"
+  "workspace": "WorkspaceSummary",
+  "token": "phoenix-channel-auth-token"
 }
 ```
 

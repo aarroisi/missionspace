@@ -109,9 +109,11 @@ class ApiClient {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
-    if (this.token) {
+
+    if (this.token?.startsWith("msk_")) {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
+
     return headers;
   }
 

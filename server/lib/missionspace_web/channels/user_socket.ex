@@ -12,15 +12,14 @@ defmodule MissionspaceWeb.UserSocket do
   channel("notifications:*", MissionspaceWeb.NotificationChannel)
 
   @impl true
-  def connect(_params, socket, %{session: session}) when is_map(session) do
-    with {:ok, user_id} <- fetch_session_value(session, :user_id),
+  def connect(_params, socket, %{auth_token: token}) when is_binary(token) do
+    with {:ok, user_id} <- Phoenix.Token.verify(socket, "user socket", token, max_age: 1_209_600),
          {:ok, user} <- Accounts.get_user(user_id),
-         :ok <- validate_user(user),
-         {:ok, workspace_id} <- resolve_workspace_id(session, user.workspace_id) do
+         :ok <- validate_user(user) do
       {:ok,
        socket
        |> assign(:user_id, user.id)
-       |> assign(:workspace_id, workspace_id)}
+       |> assign(:workspace_id, user.workspace_id)}
     else
       _ -> :error
     end
@@ -29,23 +28,6 @@ defmodule MissionspaceWeb.UserSocket do
   def connect(_params, _socket, _connect_info) do
     :error
   end
-
-  defp fetch_session_value(session, key) do
-    case Map.get(session, key) || Map.get(session, Atom.to_string(key)) do
-      value when is_binary(value) -> {:ok, value}
-      _ -> :error
-    end
-  end
-
-  defp resolve_workspace_id(session, user_workspace_id) when is_binary(user_workspace_id) do
-    case Map.get(session, :workspace_id) || Map.get(session, "workspace_id") do
-      nil -> {:ok, user_workspace_id}
-      ^user_workspace_id -> {:ok, user_workspace_id}
-      _ -> :error
-    end
-  end
-
-  defp resolve_workspace_id(_session, _user_workspace_id), do: :error
 
   defp validate_user(user) do
     cond do

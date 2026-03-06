@@ -5,9 +5,15 @@ const WS_URL = import.meta.env.VITE_WS_URL || '/socket'
 
 let socket: Socket | null = null
 
-function getSocket(): Socket {
+function getSocket(): Socket | null {
   if (!socket) {
-    socket = new Socket(WS_URL)
+    const authToken = localStorage.getItem('auth_token')
+
+    if (!authToken) {
+      return null
+    }
+
+    socket = new Socket(WS_URL, { authToken })
     socket.connect()
   }
   return socket
@@ -24,6 +30,8 @@ export function useChannel(
     if (!topic) return
 
     const sock = getSocket()
+    if (!sock) return
+
     const ch = sock.channel(topic, {})
 
     ch.join()
