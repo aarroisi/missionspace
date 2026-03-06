@@ -5,7 +5,9 @@ defmodule MissionspaceWeb.AuthController do
 
   action_fallback(MissionspaceWeb.FallbackController)
 
-  @max_remembered_accounts 10
+  @device_cookie_name "ms_device"
+  @device_cookie_max_age 1_209_600
+  @device_cookie_opts [max_age: @device_cookie_max_age, same_site: "Lax", http_only: true]
 
   def register(conn, %{
         "workspace_name" => workspace_name,
@@ -15,12 +17,14 @@ defmodule MissionspaceWeb.AuthController do
       }) do
     case Accounts.register_workspace_and_user(workspace_name, name, email, password) do
       {:ok, %{workspace: workspace, user: user}} ->
-        conn
-        |> put_session(:user_id, user.id)
-        |> put_session(:workspace_id, workspace.id)
-        |> remember_account(user.id)
-        |> put_status(:created)
-        |> json(auth_payload(user, workspace))
+        with {:ok, conn, device_session} <- ensure_device_session_cookie(conn),
+             {:ok, %{device_account: device_account, session_token: session_token}} <-
+               Accounts.remember_device_account(device_session, user) do
+          conn
+          |> put_current_auth_session(user, device_account.id, session_token)
+          |> put_status(:created)
+          |> json(auth_payload(user, workspace))
+        end
 
       {:error, changeset} ->
         conn
@@ -39,11 +43,13 @@ defmodule MissionspaceWeb.AuthController do
           |> put_status(:forbidden)
           |> json(%{error: "email_not_verified"})
         else
-          conn
-          |> put_session(:user_id, user.id)
-          |> put_session(:workspace_id, user.workspace_id)
-          |> remember_account(user.id)
-          |> json(auth_payload(user, user.workspace))
+          with {:ok, conn, device_session} <- ensure_device_session_cookie(conn),
+               {:ok, %{device_account: device_account, session_token: session_token}} <-
+                 Accounts.remember_device_account(device_session, user) do
+            conn
+            |> put_current_auth_session(user, device_account.id, session_token)
+            |> json(auth_payload(user, user.workspace))
+          end
         end
 
       {:error, :invalid_credentials} ->
@@ -54,62 +60,56 @@ defmodule MissionspaceWeb.AuthController do
   end
 
   def logout(conn, _params) do
-    current_user_id = get_session(conn, :user_id)
+    conn = fetch_cookies(conn)
 
-    remaining_account_ids =
-      conn
-      |> account_user_ids()
-      |> Enum.reject(&(&1 == current_user_id))
+    conn =
+      with {:ok, device_session} <- fetch_device_session(conn),
+           current_user_id when is_binary(current_user_id) <- get_session(conn, :user_id),
+           {:ok, _device_account, _state} <-
+             Accounts.sign_out_device_account(device_session, current_user_id) do
+        clear_current_auth_session(conn)
+      else
+        _ -> clear_current_auth_session(conn)
+      end
 
-    conn
-    |> delete_session(:user_id)
-    |> delete_session(:workspace_id)
-    |> persist_account_user_ids(remaining_account_ids)
-    |> json(%{message: "Logged out successfully"})
+    json(conn, %{message: "Logged out successfully"})
   end
 
   def accounts(conn, _params) do
-    current_user_id = get_session(conn, :user_id)
+    conn = fetch_cookies(conn)
 
-    account_summaries =
-      conn
-      |> account_user_ids()
-      |> Enum.map(&account_summary(&1, current_user_id))
-      |> Enum.reject(&is_nil/1)
+    {:ok, account_summaries} =
+      Accounts.list_device_accounts(
+        device_cookie_token(conn),
+        get_session(conn, :current_device_account_id)
+      )
 
-    conn
-    |> persist_account_user_ids(Enum.map(account_summaries, & &1.user.id))
-    |> json(%{data: account_summaries})
+    json(conn, %{data: Enum.map(account_summaries, &account_summary_payload/1)})
   end
 
   def switch_account(conn, %{"user_id" => user_id}) do
-    remembered_user_ids = account_user_ids(conn)
+    conn = fetch_cookies(conn)
 
-    if user_id in remembered_user_ids do
-      case load_account_user(user_id) do
-        {:ok, user} ->
-          conn
-          |> put_session(:user_id, user.id)
-          |> put_session(:workspace_id, user.workspace_id)
-          |> remember_account(user.id)
-          |> json(auth_payload(user, user.workspace))
-
-        {:error, :not_available} ->
-          conn
-          |> persist_account_user_ids(Enum.reject(remembered_user_ids, &(&1 == user_id)))
-          |> put_status(:forbidden)
-          |> json(%{error: "account_not_available"})
-      end
-    else
+    with {:ok, device_session} <- fetch_device_session(conn),
+         {:ok, %{device_account: device_account, session_token: session_token}} <-
+           Accounts.switch_device_account(device_session, user_id) do
       conn
-      |> put_status(:forbidden)
-      |> json(%{error: "account_not_available"})
+      |> put_current_auth_session(device_account.user, device_account.id, session_token)
+      |> json(auth_payload(device_account.user, device_account.user.workspace))
+    else
+      {:error, :reauth_required} ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "reauth_required"})
+
+      _ ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "account_not_available"})
     end
   end
 
   def add_account(conn, %{"email" => email, "password" => password}) do
-    current_user_id = get_session(conn, :user_id)
-
     case Accounts.authenticate_user(email, password) do
       {:ok, user} ->
         if is_nil(user.email_verified_at) do
@@ -117,11 +117,20 @@ defmodule MissionspaceWeb.AuthController do
           |> put_status(:forbidden)
           |> json(%{error: "email_not_verified"})
         else
-          user = Missionspace.Repo.preload(user, :workspace)
-
-          conn
-          |> remember_account(user.id)
-          |> json(%{data: account_summary_map(user, current_user_id)})
+          with {:ok, conn, device_session} <- ensure_device_session_cookie(conn),
+               {:ok, %{device_account: device_account}} <-
+                 Accounts.remember_device_account(device_session, user) do
+            json(conn, %{
+              data:
+                account_summary_payload(
+                  Accounts.device_account_summary(
+                    device_account,
+                    "available",
+                    get_session(conn, :current_device_account_id)
+                  )
+                )
+            })
+          end
         end
 
       {:error, :invalid_credentials} ->
@@ -131,33 +140,95 @@ defmodule MissionspaceWeb.AuthController do
     end
   end
 
+  def sign_out_account(conn, %{"user_id" => user_id}) do
+    conn = fetch_cookies(conn)
+
+    with {:ok, device_session} <- fetch_device_session(conn),
+         {:ok, device_account, state} <- Accounts.sign_out_device_account(device_session, user_id) do
+      conn =
+        if get_session(conn, :user_id) == user_id do
+          clear_current_auth_session(conn)
+        else
+          conn
+        end
+
+      json(conn, %{
+        data:
+          account_summary_payload(
+            Accounts.device_account_summary(
+              device_account,
+              state,
+              get_session(conn, :current_device_account_id)
+            )
+          )
+      })
+    else
+      _ ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "account_not_available"})
+    end
+  end
+
+  def reauth_account(conn, %{"user_id" => user_id, "password" => password}) do
+    conn = fetch_cookies(conn)
+
+    with {:ok, device_session} <- fetch_device_session(conn),
+         {:ok, %{device_account: device_account, session_token: session_token}} <-
+           Accounts.reauthenticate_device_account(device_session, user_id, password) do
+      conn
+      |> put_current_auth_session(device_account.user, device_account.id, session_token)
+      |> json(auth_payload(device_account.user, device_account.user.workspace))
+    else
+      {:error, :invalid_credentials} ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Invalid email or password"})
+
+      _ ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "account_not_available"})
+    end
+  end
+
+  def remove_account(conn, %{"user_id" => user_id}) do
+    conn = fetch_cookies(conn)
+
+    with {:ok, device_session} <- fetch_device_session(conn),
+         {:ok, _device_account} <- Accounts.remove_device_account(device_session, user_id) do
+      conn =
+        if get_session(conn, :user_id) == user_id do
+          clear_current_auth_session(conn)
+        else
+          conn
+        end
+
+      send_resp(conn, :no_content, "")
+    else
+      _ ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "account_not_available"})
+    end
+  end
+
   def me(conn, _params) do
-    case get_session(conn, :user_id) do
-      nil ->
+    conn = fetch_cookies(conn)
+
+    case authenticate_current_session(conn) do
+      {:ok, conn, user, _device_account_id, _session_token} ->
+        json(conn, auth_payload(user, user.workspace))
+
+      {:error, :email_not_verified, conn} ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "email_not_verified"})
+
+      {:error, :not_authenticated, conn} ->
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "Not authenticated"})
-
-      user_id ->
-        case Accounts.get_user(user_id) do
-          {:ok, user} ->
-            user = Missionspace.Repo.preload(user, :workspace)
-
-            if is_nil(user.email_verified_at) do
-              conn
-              |> put_status(:forbidden)
-              |> json(%{error: "email_not_verified"})
-            else
-              conn
-              |> remember_account(user.id)
-              |> json(auth_payload(user, user.workspace))
-            end
-
-          {:error, :not_found} ->
-            conn
-            |> put_status(:unauthorized)
-            |> json(%{error: "User not found"})
-        end
     end
   end
 
@@ -274,68 +345,101 @@ defmodule MissionspaceWeb.AuthController do
     }
   end
 
-  defp account_summary(user_id, current_user_id) do
-    case load_account_user(user_id) do
-      {:ok, user} -> account_summary_map(user, current_user_id)
-      {:error, :not_available} -> nil
-    end
-  end
-
-  defp account_summary_map(user, current_user_id) do
+  defp account_summary_payload(summary) do
     %{
-      user: user_payload(user),
-      workspace: workspace_payload(user.workspace),
-      current: user.id == current_user_id
+      user: user_payload(summary.user),
+      workspace: workspace_payload(summary.workspace),
+      current: summary.current,
+      state: summary.state
     }
   end
 
-  defp load_account_user(user_id) do
-    case Accounts.get_user(user_id) do
-      {:ok, user} ->
-        user = Missionspace.Repo.preload(user, :workspace)
+  defp authenticate_current_session(conn) do
+    case {
+      device_cookie_token(conn),
+      get_session(conn, :current_device_account_id),
+      get_session(conn, :current_device_account_token)
+    } do
+      {device_token, device_account_id, session_token}
+      when is_binary(device_token) and is_binary(device_account_id) and is_binary(session_token) ->
+        case Accounts.authenticate_device_account_session(
+               device_token,
+               device_account_id,
+               session_token
+             ) do
+          {:ok, device_account} ->
+            user = device_account.user
 
-        cond do
-          not user.is_active -> {:error, :not_available}
-          is_nil(user.email_verified_at) -> {:error, :not_available}
-          is_nil(user.workspace) -> {:error, :not_available}
-          true -> {:ok, user}
+            if is_nil(user.email_verified_at) do
+              {:error, :email_not_verified, clear_current_auth_session(conn)}
+            else
+              {:ok, put_current_auth_session(conn, user, device_account.id, session_token), user,
+               device_account.id, session_token}
+            end
+
+          _ ->
+            {:error, :not_authenticated, clear_current_auth_session(conn)}
         end
 
-      {:error, :not_found} ->
-        {:error, :not_available}
+      _ ->
+        authenticate_legacy_session(conn)
     end
   end
 
-  defp remember_account(conn, user_id) do
-    updated_ids =
-      conn
-      |> account_user_ids()
-      |> Enum.reject(&(&1 == user_id))
-      |> then(&[user_id | &1])
-      |> Enum.take(@max_remembered_accounts)
+  defp authenticate_legacy_session(conn) do
+    case get_session(conn, :user_id) do
+      nil ->
+        {:error, :not_authenticated, clear_current_auth_session(conn)}
 
-    persist_account_user_ids(conn, updated_ids)
+      user_id ->
+        case Accounts.get_user(user_id) do
+          {:ok, user} ->
+            user = Missionspace.Repo.preload(user, :workspace)
+
+            if is_nil(user.email_verified_at) do
+              {:error, :email_not_verified, conn}
+            else
+              {:ok, conn, user, nil, nil}
+            end
+
+          {:error, :not_found} ->
+            {:error, :not_authenticated, clear_current_auth_session(conn)}
+        end
+    end
   end
 
-  defp account_user_ids(conn) do
+  defp ensure_device_session_cookie(conn) do
+    with {:ok, %{device_session: device_session, token: device_token}} <-
+           Accounts.ensure_device_session(device_cookie_token(conn)) do
+      {:ok, put_resp_cookie(conn, @device_cookie_name, device_token, @device_cookie_opts),
+       device_session}
+    end
+  end
+
+  defp fetch_device_session(conn) do
+    case Accounts.get_device_session(device_cookie_token(conn)) do
+      {:ok, device_session} -> {:ok, device_session}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  defp put_current_auth_session(conn, user, device_account_id, session_token) do
     conn
-    |> get_session(:account_user_ids)
-    |> normalize_account_user_ids()
+    |> put_session(:user_id, user.id)
+    |> put_session(:workspace_id, user.workspace_id)
+    |> put_session(:current_device_account_id, device_account_id)
+    |> put_session(:current_device_account_token, session_token)
   end
 
-  defp normalize_account_user_ids(account_ids) when is_list(account_ids) do
-    account_ids
-    |> Enum.filter(&is_binary/1)
-    |> Enum.uniq()
-    |> Enum.take(@max_remembered_accounts)
+  defp clear_current_auth_session(conn) do
+    conn
+    |> delete_session(:user_id)
+    |> delete_session(:workspace_id)
+    |> delete_session(:current_device_account_id)
+    |> delete_session(:current_device_account_token)
   end
 
-  defp normalize_account_user_ids(_), do: []
-
-  defp persist_account_user_ids(conn, account_ids) when is_list(account_ids) do
-    case normalize_account_user_ids(account_ids) do
-      [] -> delete_session(conn, :account_user_ids)
-      normalized_ids -> put_session(conn, :account_user_ids, normalized_ids)
-    end
+  defp device_cookie_token(conn) do
+    conn.req_cookies[@device_cookie_name]
   end
 end

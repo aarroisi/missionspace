@@ -9,8 +9,11 @@
 | POST | `/api/auth/login` | No | Logs in with email/password |
 | POST | `/api/auth/logout` | No | Clears session if present |
 | GET | `/api/auth/me` | Session expected | Public route that reads session directly |
-| GET | `/api/auth/accounts` | No | Lists remembered device accounts from session |
-| POST | `/api/auth/switch-account` | No | Switches current session to a remembered account |
+| GET | `/api/auth/accounts` | No | Lists remembered device accounts from device cookie |
+| DELETE | `/api/auth/accounts/:user_id` | No | Removes a remembered account from the device |
+| POST | `/api/auth/switch-account` | No | Switches current session to an available remembered account |
+| POST | `/api/auth/sign-out-account` | No | Signs out a remembered account without removing it |
+| POST | `/api/auth/reauth-account` | No | Reauthenticates a signed-out remembered account |
 | PUT | `/api/auth/me` | Yes | Updates current user profile |
 | POST | `/api/auth/add-account` | Yes | Adds another remembered account to current device session |
 | POST | `/api/auth/verify-email` | No | Verifies email by token |
@@ -43,8 +46,9 @@
 
 - Behavior:
   - Creates workspace and first user.
-  - Sets session (`user_id`, `workspace_id`).
-  - Adds the user to remembered account ids in session (`account_user_ids`).
+  - Creates or reuses the device cookie (`ms_device`).
+  - Issues a device-scoped account session for the new user.
+  - Sets active session (`user_id`, `workspace_id`, `current_device_account_id`, `current_device_account_token`).
   - Sends verification email.
 - Response `201`:
 
@@ -72,7 +76,8 @@
 - Behavior:
   - Authenticates active user with password hash comparison.
   - Sets session before email-verification gate.
-  - On verified login, adds user to remembered account ids in session (`account_user_ids`).
+  - On verified login, creates or reuses the device cookie (`ms_device`).
+  - On verified login, issues or refreshes a device-scoped account session for that remembered account.
 - Success response `200`:
 
 ```json
@@ -90,18 +95,18 @@
 
 - Request: none
 - Behavior:
-  - Clears current account session (`user_id`, `workspace_id`).
-  - Removes current user from remembered account ids.
-  - Keeps other remembered accounts in session.
+  - Signs out the current remembered account only.
+  - Clears active session (`user_id`, `workspace_id`, `current_device_account_id`, `current_device_account_token`).
+  - Keeps the account on the device list in `signed_out` state.
 - Response `200`: `{"message":"Logged out successfully"}`
 
 ## GET `/api/auth/me`
 
 - Request: none
 - Behavior:
-  - Reads `:user_id` from session (not via AuthPlug).
+  - Validates the current device-scoped account session if present.
+  - Falls back to legacy `:user_id` session reads when device account session keys are absent.
   - Returns current user + workspace.
-  - Ensures current user is remembered in `account_user_ids` session list.
 - Success `200`:
 
 ```json
@@ -120,9 +125,11 @@
 
 - Request: none
 - Behavior:
-  - Reads remembered user ids from session key `account_user_ids`.
+  - Resolves device cookie `ms_device` to a server-side device session.
+  - Returns remembered accounts for that device.
   - Returns only active + email-verified users that still have a workspace.
-  - Cleans stale ids out of session automatically.
+  - Expired remembered accounts are normalized to `signed_out`.
+  - Invalid accounts are removed from the device list.
 - Response `200`:
 
 ```json
@@ -131,11 +138,22 @@
     {
       "user": "AuthUser",
       "workspace": "WorkspaceSummary",
-      "current": true
+      "current": true,
+      "state": "available"
     }
   ]
 }
 ```
+
+## DELETE `/api/auth/accounts/:user_id`
+
+- Request: none
+- Behavior:
+  - Removes the remembered account from the current device session entirely.
+  - If it is the current active account, also clears the active session.
+- Success `204`: empty body
+- Failure cases:
+  - `403` `{"error":"account_not_available"}`
 
 ## POST `/api/auth/switch-account`
 
@@ -148,9 +166,9 @@
 ```
 
 - Behavior:
-  - Only allows switching to users present in session `account_user_ids`.
-  - Sets session (`user_id`, `workspace_id`) to selected account.
-  - Moves selected account to front of remembered account list.
+  - Only allows switching to remembered accounts in `available` state.
+  - Issues a fresh active session for that remembered account.
+  - Signed-out remembered accounts must use reauth instead.
 - Success `200`:
 
 ```json
@@ -161,6 +179,65 @@
 ```
 
 - Failure cases:
+  - `403` `{"error":"account_not_available"}`
+  - `403` `{"error":"reauth_required"}`
+
+## POST `/api/auth/sign-out-account`
+
+- Request body:
+
+```json
+{
+  "user_id": "uuid"
+}
+```
+
+- Behavior:
+  - Signs out a specific remembered account without removing it from the device list.
+  - Clears that account's device-scoped auth token and marks it `signed_out`.
+  - If it is the current active account, also clears the active session.
+- Success `200`:
+
+```json
+{
+  "data": {
+    "user": "AuthUser",
+    "workspace": "WorkspaceSummary",
+    "current": false,
+    "state": "signed_out"
+  }
+}
+```
+
+- Failure cases:
+  - `403` `{"error":"account_not_available"}`
+
+## POST `/api/auth/reauth-account`
+
+- Request body:
+
+```json
+{
+  "user_id": "uuid",
+  "password": "password123"
+}
+```
+
+- Behavior:
+  - Reauthenticates a remembered signed-out account for the same locked account identity.
+  - Issues a fresh active device-scoped account session.
+  - Sets that account as current.
+- Success `200`:
+
+```json
+{
+  "user": "AuthUser",
+  "workspace": "WorkspaceSummary"
+}
+```
+
+- Failure cases:
+  - `401` `{"error":"Invalid email or password"}`
   - `403` `{"error":"account_not_available"}`
 
 ## POST `/api/auth/add-account`
@@ -177,7 +254,8 @@
 
 - Behavior:
   - Authenticates another active account by credentials.
-  - Adds that user id to session `account_user_ids`.
+  - Creates or reuses the device cookie (`ms_device`).
+  - Issues or refreshes a device-scoped auth session for that remembered account.
   - Does **not** change the currently active session user.
 - Success `200`:
 
@@ -186,7 +264,8 @@
   "data": {
     "user": "AuthUser",
     "workspace": "WorkspaceSummary",
-    "current": false
+    "current": false,
+    "state": "available"
   }
 }
 ```

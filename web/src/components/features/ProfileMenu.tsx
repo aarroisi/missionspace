@@ -1,22 +1,25 @@
 import { useState } from "react";
 import { Code2, LogOut, User, UserPlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
+import { DeviceAccount, useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { Dropdown, DropdownDivider, DropdownItem } from "@/components/ui/Dropdown";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DevelopersModal } from "./DevelopersModal";
 import { ProfileModal } from "./ProfileModal";
 import { AddAccountModal } from "./AddAccountModal";
+import { AccountReauthModal } from "./AccountReauthModal";
 
 export function ProfileMenu() {
-  const navigate = useNavigate();
-  const { user, accounts, logout, switchAccount } = useAuthStore();
+  const { user, accounts, logout, switchAccount, signOutAccount, removeAccount } = useAuthStore();
   const { success, error: showError } = useToastStore();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isDevelopersModalOpen, setIsDevelopersModalOpen] = useState(false);
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [switchingAccountId, setSwitchingAccountId] = useState<string | null>(null);
+  const [reauthAccount, setReauthAccount] = useState<DeviceAccount | null>(null);
+  const [accountToRemove, setAccountToRemove] = useState<DeviceAccount | null>(null);
+  const [isRemovingAccount, setIsRemovingAccount] = useState(false);
 
   if (!user) return null;
 
@@ -24,7 +27,6 @@ export function ProfileMenu() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
   };
 
   const handleSwitchAccount = async (userId: string) => {
@@ -32,13 +34,39 @@ export function ProfileMenu() {
 
     try {
       await switchAccount(userId);
-      success("Account switched");
-      navigate("/dashboard");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to switch account";
       showError(message);
     } finally {
       setSwitchingAccountId(null);
+    }
+  };
+
+  const handleAccountSignOut = async (userId: string) => {
+    try {
+      await signOutAccount(userId);
+      success("Account signed out on this device");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to sign out account";
+      showError(message);
+    }
+  };
+
+  const handleRemoveAccount = async () => {
+    if (!accountToRemove) return;
+
+    setIsRemovingAccount(true);
+
+    try {
+      await removeAccount(accountToRemove.user.id);
+      setAccountToRemove(null);
+      setReauthAccount(null);
+      success("Account removed from this device");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to remove account";
+      showError(message);
+    } finally {
+      setIsRemovingAccount(false);
     }
   };
 
@@ -78,22 +106,59 @@ export function ProfileMenu() {
             <div className="mt-2 space-y-1">
               {otherAccounts.map((account) => {
                 const isSwitching = switchingAccountId === account.user.id;
+                const isSignedOut = account.state === "signed_out";
 
                 return (
-                  <button
-                    key={account.user.id}
-                    type="button"
-                    onClick={() => void handleSwitchAccount(account.user.id)}
-                    disabled={switchingAccountId !== null}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-dark-text transition-colors hover:bg-dark-border disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Avatar name={account.user.name} src={account.user.avatar} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{account.user.name}</p>
-                      <p className="truncate text-xs text-dark-text-muted">{account.user.email}</p>
+                  <div key={account.user.id} className="rounded-md px-2 py-2 transition-colors hover:bg-dark-border/60">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isSignedOut) {
+                          setReauthAccount(account);
+                          return;
+                        }
+
+                        void handleSwitchAccount(account.user.id);
+                      }}
+                      disabled={switchingAccountId !== null}
+                      className="flex w-full items-center gap-2 text-left text-dark-text disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Avatar name={account.user.name} src={account.user.avatar} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium">{account.user.name}</p>
+                          {isSignedOut && (
+                            <span className="rounded-full bg-dark-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-dark-text-muted">
+                              Signed out
+                            </span>
+                          )}
+                        </div>
+                        <p className="truncate text-xs text-dark-text-muted">{account.user.email}</p>
+                      </div>
+                      {isSwitching && !isSignedOut && (
+                        <span className="text-xs text-dark-text-muted">Switching...</span>
+                      )}
+                    </button>
+
+                    <div className="mt-2 flex items-center justify-end gap-3 pl-8 text-xs">
+                      {!isSignedOut && (
+                        <button
+                          type="button"
+                          onClick={() => void handleAccountSignOut(account.user.id)}
+                          className="text-dark-text-muted transition-colors hover:text-dark-text"
+                        >
+                          Sign out
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setAccountToRemove(account)}
+                        className="text-red-400 transition-colors hover:text-red-300"
+                      >
+                        Remove
+                      </button>
                     </div>
-                    {isSwitching && <span className="text-xs text-dark-text-muted">Switching...</span>}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -140,6 +205,25 @@ export function ProfileMenu() {
       <AddAccountModal
         isOpen={isAddAccountModalOpen}
         onClose={() => setIsAddAccountModalOpen(false)}
+      />
+      <AccountReauthModal
+        account={reauthAccount}
+        isOpen={reauthAccount !== null}
+        onClose={() => setReauthAccount(null)}
+        onRemove={(account) => setAccountToRemove(account)}
+      />
+      <ConfirmModal
+        isOpen={accountToRemove !== null}
+        title="Remove account from device"
+        message={
+          accountToRemove
+            ? `Remove ${accountToRemove.user.email} from this device? You will need to sign in again to add it back.`
+            : ""
+        }
+        confirmText={isRemovingAccount ? "Removing..." : "Remove"}
+        confirmVariant="danger"
+        onConfirm={() => void handleRemoveAccount()}
+        onCancel={() => setAccountToRemove(null)}
       />
     </>
   );

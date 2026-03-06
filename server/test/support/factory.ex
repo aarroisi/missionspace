@@ -125,6 +125,21 @@ defmodule Missionspace.Factory do
     }
   end
 
+  def device_session_factory do
+    %Missionspace.Accounts.DeviceSession{
+      token_hash: sequence(:device_session_token_hash, &"device-token-hash-#{&1}")
+    }
+  end
+
+  def device_session_account_factory do
+    %Missionspace.Accounts.DeviceSessionAccount{
+      session_token_hash: sequence(:device_account_token_hash, &"account-token-hash-#{&1}"),
+      session_token_expires_at: DateTime.add(DateTime.utc_now(), 14, :day),
+      last_used_at: DateTime.utc_now(),
+      last_authenticated_at: DateTime.utc_now()
+    }
+  end
+
   def subscription_factory do
     %Missionspace.Subscriptions.Subscription{
       item_type: "task",

@@ -26,6 +26,7 @@ defmodule Missionspace.Accounts.User do
     has_many(:project_members, Missionspace.Projects.ProjectMember)
     has_many(:projects, through: [:project_members, :project])
     has_many(:api_keys, Missionspace.ApiKeys.ApiKey)
+    has_many(:device_session_accounts, Missionspace.Accounts.DeviceSessionAccount)
 
     timestamps()
   end

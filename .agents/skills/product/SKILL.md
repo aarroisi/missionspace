@@ -48,10 +48,13 @@ All content created within a workspace belongs to the workspace, not individual 
 ### Multi-User Login on One Device
 
 - A browser/device can remember multiple signed-in accounts for quick switching.
-- Remembered accounts are session-backed (server session key), not global workspace membership.
+- Remembered accounts are device-backed; the browser keeps an opaque device cookie while server state tracks each remembered account.
+- Each remembered account has its own auth lifecycle on the device and can independently become `signed_out`.
 - Account switching is explicit: user chooses another remembered account and session is switched.
 - Adding an account requires valid email/password for that account.
-- Log out removes the current account from remembered accounts, but keeps other remembered accounts available on the same device.
+- Logging out signs out only the current account; it stays visible on the device list as `signed_out` until removed or reauthenticated.
+- Signed-out remembered accounts must re-enter the password for that same locked email; changing email is a separate "Use another account" flow.
+- Removing an account from the device is a separate action from signing out.
 - Scope note: one user still belongs to one workspace; this feature is only about multi-account device UX.
 
 ### Member Deletion (Soft Delete)

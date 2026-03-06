@@ -18,17 +18,43 @@ defmodule MissionspaceWeb.Plugs.AuthPlug do
   end
 
   defp authenticate_with_session(conn) do
+    conn = fetch_cookies(conn)
+
+    case {
+      conn.req_cookies["ms_device"],
+      get_session(conn, :current_device_account_id),
+      get_session(conn, :current_device_account_token)
+    } do
+      {device_token, device_account_id, session_token}
+      when is_binary(device_token) and is_binary(device_account_id) and is_binary(session_token) ->
+        case Accounts.authenticate_device_account_session(
+               device_token,
+               device_account_id,
+               session_token
+             ) do
+          {:ok, device_account} ->
+            validate_authenticated_user(conn, device_account.user, :session, nil)
+
+          _ ->
+            conn
+            |> clear_current_auth_session()
+            |> unauthorized()
+        end
+
+      _ ->
+        authenticate_with_legacy_session(conn)
+    end
+  end
+
+  defp authenticate_with_legacy_session(conn) do
     case get_session(conn, :user_id) do
       nil ->
         unauthorized(conn)
 
       user_id ->
         case Accounts.get_user(user_id) do
-          {:ok, user} ->
-            validate_authenticated_user(conn, user, :session, nil)
-
-          {:error, :not_found} ->
-            unauthorized(conn)
+          {:ok, user} -> validate_authenticated_user(conn, user, :session, nil)
+          {:error, :not_found} -> unauthorized(conn)
         end
     end
   end
@@ -95,6 +121,14 @@ defmodule MissionspaceWeb.Plugs.AuthPlug do
 
   defp maybe_clear_session(conn, :session), do: clear_session(conn)
   defp maybe_clear_session(conn, _), do: conn
+
+  defp clear_current_auth_session(conn) do
+    conn
+    |> delete_session(:user_id)
+    |> delete_session(:workspace_id)
+    |> delete_session(:current_device_account_id)
+    |> delete_session(:current_device_account_token)
+  end
 
   defp extract_api_key(conn) do
     with nil <- List.first(get_req_header(conn, "x-api-key")),

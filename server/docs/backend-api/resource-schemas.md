@@ -35,7 +35,8 @@ This page defines the core response objects reused across endpoints.
 {
   "user": "AuthUser",
   "workspace": "WorkspaceSummary",
-  "current": true
+  "current": true,
+  "state": "available|signed_out"
 }
 ```
 

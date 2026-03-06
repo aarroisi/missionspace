@@ -6,8 +6,10 @@ defmodule Missionspace.Accounts do
   import Ecto.Query, warn: false
   alias Missionspace.Repo
 
-  alias Missionspace.Accounts.{User, Workspace}
+  alias Missionspace.Accounts.{DeviceSession, DeviceSessionAccount, User, Workspace}
   alias Missionspace.ApiKeys
+
+  @device_account_session_max_age 1_209_600
 
   @doc """
   Returns the list of users.
@@ -358,6 +360,187 @@ defmodule Missionspace.Accounts do
     end
   end
 
+  @doc """
+  Returns an existing device session for a cookie token or creates a new one.
+  """
+  def ensure_device_session(device_token \\ nil)
+
+  def ensure_device_session(device_token) when is_binary(device_token) do
+    case get_device_session_by_token(device_token) do
+      {:ok, device_session} ->
+        touch_device_session(device_session)
+        {:ok, %{device_session: device_session, token: device_token, created?: false}}
+
+      {:error, :not_found} ->
+        create_device_session()
+    end
+  end
+
+  def ensure_device_session(_), do: create_device_session()
+
+  def get_device_session(device_token) when is_binary(device_token) do
+    get_device_session_by_token(device_token)
+  end
+
+  def get_device_session(_), do: {:error, :not_found}
+
+  @doc """
+  Lists remembered accounts for a device token.
+  """
+  def list_device_accounts(device_token, current_device_account_id \\ nil)
+
+  def list_device_accounts(device_token, current_device_account_id)
+      when is_binary(device_token) do
+    with {:ok, device_session} <- get_device_session_by_token(device_token) do
+      touch_device_session(device_session)
+
+      account_summaries =
+        device_session_accounts_query(device_session.id)
+        |> Repo.all()
+        |> Enum.reduce([], fn account, summaries ->
+          case normalize_device_account(account) do
+            {:ok, normalized_account, state} ->
+              [
+                device_account_summary(normalized_account, state, current_device_account_id)
+                | summaries
+              ]
+
+            {:error, :not_available} ->
+              _ = Repo.delete(account)
+              summaries
+          end
+        end)
+        |> Enum.reverse()
+
+      {:ok, account_summaries}
+    else
+      {:error, :not_found} -> {:ok, []}
+    end
+  end
+
+  def list_device_accounts(_, _), do: {:ok, []}
+
+  @doc """
+  Authenticates the current session against a device account token.
+  """
+  def authenticate_device_account_session(device_token, device_account_id, session_token)
+      when is_binary(device_token) and is_binary(device_account_id) and is_binary(session_token) do
+    with {:ok, device_session} <- get_device_session_by_token(device_token),
+         %DeviceSessionAccount{} = account <-
+           get_device_account(device_session.id, device_account_id),
+         {:ok, normalized_account, "available"} <- normalize_device_account(account),
+         true <- token_matches?(normalized_account, session_token) do
+      {:ok, normalized_account}
+    else
+      nil -> {:error, :not_found}
+      false -> {:error, :signed_out}
+      {:ok, _normalized_account, "signed_out"} -> {:error, :signed_out}
+      {:error, :not_available} -> {:error, :not_found}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  def authenticate_device_account_session(_, _, _), do: {:error, :not_found}
+
+  @doc """
+  Remembers an account on a device and marks it available.
+  """
+  def remember_device_account(%DeviceSession{} = device_session, %User{} = user) do
+    issue_device_account_session(device_session, user)
+  end
+
+  @doc """
+  Switches to an available remembered account on a device.
+  """
+  def switch_device_account(%DeviceSession{} = device_session, user_id) when is_binary(user_id) do
+    case Repo.get_by(DeviceSessionAccount, device_session_id: device_session.id, user_id: user_id) do
+      nil ->
+        {:error, :not_found}
+
+      account ->
+        case normalize_device_account(account) do
+          {:ok, _account, "signed_out"} ->
+            {:error, :reauth_required}
+
+          {:ok, normalized_account, "available"} ->
+            issue_device_account_session(
+              device_session,
+              normalized_account.user,
+              normalized_account
+            )
+
+          {:error, :not_available} ->
+            {:error, :not_found}
+        end
+    end
+  end
+
+  @doc """
+  Signs out the remembered account on a device without removing it.
+  """
+  def sign_out_device_account(%DeviceSession{} = device_session, user_id)
+      when is_binary(user_id) do
+    case Repo.get_by(DeviceSessionAccount, device_session_id: device_session.id, user_id: user_id) do
+      nil ->
+        {:error, :not_found}
+
+      account ->
+        account
+        |> DeviceSessionAccount.changeset(%{
+          session_token_hash: nil,
+          session_token_expires_at: nil,
+          signed_out_at: DateTime.utc_now()
+        })
+        |> Repo.update()
+        |> case do
+          {:ok, updated_account} ->
+            {:ok, preload_device_account(updated_account), "signed_out"}
+
+          error ->
+            error
+        end
+    end
+  end
+
+  @doc """
+  Removes a remembered account from the device.
+  """
+  def remove_device_account(%DeviceSession{} = device_session, user_id) when is_binary(user_id) do
+    case Repo.get_by(DeviceSessionAccount, device_session_id: device_session.id, user_id: user_id) do
+      nil -> {:error, :not_found}
+      account -> Repo.delete(account)
+    end
+  end
+
+  @doc """
+  Reauthenticates a signed-out remembered account and issues a fresh account session.
+  """
+  def reauthenticate_device_account(%DeviceSession{} = device_session, user_id, password)
+      when is_binary(user_id) and is_binary(password) do
+    with %DeviceSessionAccount{} = account <-
+           Repo.get_by(DeviceSessionAccount,
+             device_session_id: device_session.id,
+             user_id: user_id
+           ),
+         {:ok, user} <- get_user(user_id),
+         true <- User.verify_password(user, password) do
+      issue_device_account_session(device_session, user, account)
+    else
+      nil -> {:error, :not_found}
+      false -> {:error, :invalid_credentials}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  def device_account_summary(%DeviceSessionAccount{} = account, state, current_device_account_id) do
+    %{
+      user: %{account.user | password_hash: nil},
+      workspace: account.user.workspace,
+      current: state == "available" and account.id == current_device_account_id,
+      state: state
+    }
+  end
+
   # Email verification
 
   def verify_email(token) when is_binary(token) do
@@ -437,5 +620,159 @@ defmodule Missionspace.Accounts do
     |> String.replace(~r/[^a-z0-9-]/, "-")
     |> String.replace(~r/-+/, "-")
     |> String.trim("-")
+  end
+
+  defp create_device_session do
+    token = generate_token()
+
+    %DeviceSession{}
+    |> DeviceSession.create_changeset(%{
+      token_hash: hash_token(token),
+      last_seen_at: DateTime.utc_now()
+    })
+    |> Repo.insert()
+    |> case do
+      {:ok, device_session} ->
+        {:ok, %{device_session: device_session, token: token, created?: true}}
+
+      error ->
+        error
+    end
+  end
+
+  defp get_device_session_by_token(device_token) do
+    case Repo.get_by(DeviceSession, token_hash: hash_token(device_token)) do
+      nil -> {:error, :not_found}
+      device_session -> {:ok, device_session}
+    end
+  end
+
+  defp touch_device_session(%DeviceSession{} = device_session) do
+    device_session
+    |> DeviceSession.touch_changeset()
+    |> Repo.update()
+  end
+
+  defp device_session_accounts_query(device_session_id) do
+    from(account in DeviceSessionAccount,
+      where: account.device_session_id == ^device_session_id,
+      order_by: [desc: account.last_used_at, desc: account.inserted_at],
+      preload: [user: :workspace]
+    )
+  end
+
+  defp get_device_account(device_session_id, device_account_id) do
+    DeviceSessionAccount
+    |> where(
+      [account],
+      account.device_session_id == ^device_session_id and account.id == ^device_account_id
+    )
+    |> preload(user: :workspace)
+    |> Repo.one()
+  end
+
+  defp preload_device_account(%DeviceSessionAccount{} = account) do
+    Repo.preload(account, user: :workspace)
+  end
+
+  defp normalize_device_account(%DeviceSessionAccount{} = account) do
+    account = preload_device_account(account)
+    user = account.user
+
+    cond do
+      is_nil(user) ->
+        {:error, :not_available}
+
+      not user.is_active ->
+        {:error, :not_available}
+
+      is_nil(user.email_verified_at) ->
+        {:error, :not_available}
+
+      is_nil(user.workspace) ->
+        {:error, :not_available}
+
+      account_expired?(account) ->
+        {:ok, expire_device_account(account), "signed_out"}
+
+      is_nil(account.session_token_hash) or not is_nil(account.signed_out_at) ->
+        {:ok, account, "signed_out"}
+
+      true ->
+        {:ok, account, "available"}
+    end
+  end
+
+  defp expire_device_account(%DeviceSessionAccount{} = account) do
+    {:ok, updated_account} =
+      account
+      |> DeviceSessionAccount.changeset(%{
+        session_token_hash: nil,
+        session_token_expires_at: nil,
+        signed_out_at: account.signed_out_at || DateTime.utc_now()
+      })
+      |> Repo.update()
+
+    preload_device_account(updated_account)
+  end
+
+  defp issue_device_account_session(
+         %DeviceSession{} = device_session,
+         %User{} = user,
+         account \\ nil
+       ) do
+    account =
+      account ||
+        Repo.get_by(DeviceSessionAccount, device_session_id: device_session.id, user_id: user.id)
+
+    session_token = generate_token()
+    now = DateTime.utc_now()
+
+    attrs = %{
+      device_session_id: device_session.id,
+      user_id: user.id,
+      session_token_hash: hash_token(session_token),
+      session_token_expires_at: DateTime.add(now, @device_account_session_max_age, :second),
+      signed_out_at: nil,
+      last_used_at: now,
+      last_authenticated_at: now
+    }
+
+    changeset =
+      case account do
+        %DeviceSessionAccount{} = existing_account ->
+          DeviceSessionAccount.changeset(existing_account, attrs)
+
+        nil ->
+          DeviceSessionAccount.changeset(%DeviceSessionAccount{}, attrs)
+      end
+
+    case Repo.insert_or_update(changeset) do
+      {:ok, updated_account} ->
+        {:ok,
+         %{device_account: preload_device_account(updated_account), session_token: session_token}}
+
+      error ->
+        error
+    end
+  end
+
+  defp token_matches?(%DeviceSessionAccount{} = account, session_token) do
+    account.session_token_hash == hash_token(session_token)
+  end
+
+  defp account_expired?(%DeviceSessionAccount{session_token_expires_at: nil}), do: false
+
+  defp account_expired?(%DeviceSessionAccount{session_token_expires_at: expires_at}) do
+    DateTime.compare(DateTime.utc_now(), expires_at) == :gt
+  end
+
+  defp generate_token do
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+  end
+
+  defp hash_token(token) do
+    :crypto.hash(:sha256, token)
+    |> Base.encode16(case: :lower)
   end
 end

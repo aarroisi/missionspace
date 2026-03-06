@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { User } from "@/types";
 import { api, API_URL } from "@/lib/api";
+import { disconnectSocket } from "@/hooks/useChannel";
 
 interface ItemWithCreator {
   createdById?: string;
@@ -23,10 +24,11 @@ interface WorkspaceMember {
   online: boolean;
 }
 
-interface DeviceAccount {
+export interface DeviceAccount {
   user: User;
   workspace: Workspace;
   current: boolean;
+  state: "available" | "signed_out";
 }
 
 interface AuthState {
@@ -43,6 +45,9 @@ interface AuthState {
   fetchAccounts: () => Promise<void>;
   switchAccount: (userId: string) => Promise<void>;
   addAccount: (email: string, password: string) => Promise<void>;
+  reauthAccount: (userId: string, password: string) => Promise<void>;
+  signOutAccount: (userId: string) => Promise<void>;
+  removeAccount: (userId: string) => Promise<void>;
   fetchMembers: () => Promise<void>;
   updateProfile: (data: {
     name?: string;
@@ -138,6 +143,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
+      disconnectSocket();
       api.clearToken();
       localStorage.removeItem("logged_in");
       set({
@@ -147,7 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         needsEmailVerification: false,
       });
-      await get().fetchAccounts();
+      window.location.assign("/login");
     }
   },
 
@@ -167,6 +173,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
       } else if (response.status === 403) {
         const data = await response.json();
+        disconnectSocket();
         localStorage.removeItem("logged_in");
         if (data.error === "email_not_verified") {
           set({
@@ -188,6 +195,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       } else if (response.status === 401) {
+        disconnectSocket();
         localStorage.removeItem("logged_in");
         set({
           user: null,
@@ -206,6 +214,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (error) {
       console.warn("Auth check failed after retry:", error);
+      disconnectSocket();
       set((state) => ({
         ...state,
         isLoading: false,
@@ -230,6 +239,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       userId,
     });
 
+    disconnectSocket();
     localStorage.setItem("logged_in", "1");
     set({
       user: data.user,
@@ -240,11 +250,79 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isLoading: false,
     });
 
-    await get().fetchAccounts();
+    window.location.assign("/dashboard");
   },
 
   addAccount: async (email: string, password: string) => {
     await api.post("/auth/add-account", { email, password });
+    await get().fetchAccounts();
+  },
+
+  reauthAccount: async (userId: string, password: string) => {
+    const data = await api.post<{ user: User; workspace: Workspace }>("/auth/reauth-account", {
+      userId,
+      password,
+    });
+
+    disconnectSocket();
+    localStorage.setItem("logged_in", "1");
+    set({
+      user: data.user,
+      workspace: data.workspace,
+      members: [],
+      isAuthenticated: true,
+      needsEmailVerification: false,
+      isLoading: false,
+    });
+
+    window.location.assign("/dashboard");
+  },
+
+  signOutAccount: async (userId: string) => {
+    await api.post<{ data: DeviceAccount }>("/auth/sign-out-account", { userId });
+
+    const state = get();
+    const isCurrentUser = state.user?.id === userId;
+
+    if (isCurrentUser) {
+      disconnectSocket();
+      api.clearToken();
+      localStorage.removeItem("logged_in");
+      set({
+        user: null,
+        workspace: null,
+        members: [],
+        isAuthenticated: false,
+        needsEmailVerification: false,
+      });
+      window.location.assign("/login");
+      return;
+    }
+
+    await get().fetchAccounts();
+  },
+
+  removeAccount: async (userId: string) => {
+    await api.delete(`/auth/accounts/${userId}`);
+
+    const state = get();
+    const isCurrentUser = state.user?.id === userId;
+
+    if (isCurrentUser) {
+      disconnectSocket();
+      api.clearToken();
+      localStorage.removeItem("logged_in");
+      set({
+        user: null,
+        workspace: null,
+        members: [],
+        isAuthenticated: false,
+        needsEmailVerification: false,
+      });
+      window.location.assign("/login");
+      return;
+    }
+
     await get().fetchAccounts();
   },
 

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
+import { DeviceAccount, useAuthStore } from "@/stores/authStore";
 import { useToastStore } from "@/stores/toastStore";
 import { Avatar } from "@/components/ui/Avatar";
+import { AccountReauthModal } from "@/components/features/AccountReauthModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, switchAccount, fetchAccounts, accounts } = useAuthStore();
+  const { login, switchAccount, fetchAccounts, accounts, removeAccount } = useAuthStore();
   const { success, error: showError } = useToastStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,6 +16,9 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [switchingAccountId, setSwitchingAccountId] = useState<string | null>(null);
   const [showCredentialForm, setShowCredentialForm] = useState(false);
+  const [reauthAccount, setReauthAccount] = useState<DeviceAccount | null>(null);
+  const [accountToRemove, setAccountToRemove] = useState<DeviceAccount | null>(null);
+  const [isRemovingAccount, setIsRemovingAccount] = useState(false);
 
   useEffect(() => {
     void fetchAccounts();
@@ -29,14 +34,31 @@ export function LoginPage() {
 
     try {
       await switchAccount(userId);
-      success("Signed in successfully!");
-      navigate("/dashboard");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to switch account";
       setError(errorMessage);
       showError(errorMessage);
     } finally {
       setSwitchingAccountId(null);
+    }
+  };
+
+  const handleRemoveAccount = async () => {
+    if (!accountToRemove) return;
+
+    setIsRemovingAccount(true);
+
+    try {
+      await removeAccount(accountToRemove.user.id);
+      setAccountToRemove(null);
+      setReauthAccount(null);
+      success("Account removed from this device");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to remove account";
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setIsRemovingAccount(false);
     }
   };
 
@@ -88,25 +110,42 @@ export function LoginPage() {
           <div className="space-y-3">
             {accounts.map((account) => {
               const isSwitching = switchingAccountId === account.user.id;
+              const isSignedOut = account.state === "signed_out";
 
               return (
                 <button
                   key={account.user.id}
                   type="button"
-                  onClick={() => void handleSwitchAccount(account.user.id)}
+                  onClick={() => {
+                    if (isSignedOut) {
+                      setReauthAccount(account);
+                      return;
+                    }
+
+                    void handleSwitchAccount(account.user.id);
+                  }}
                   disabled={switchingAccountId !== null}
                   className="w-full rounded-lg border border-dark-border bg-dark-surface px-4 py-3 text-left transition-colors hover:border-blue-500/50 hover:bg-dark-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <div className="flex items-center gap-3">
                     <Avatar name={account.user.name} src={account.user.avatar} size="md" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-dark-text">{account.user.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-dark-text">{account.user.name}</p>
+                        {isSignedOut && (
+                          <span className="rounded-full bg-dark-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-dark-text-muted">
+                            Signed out
+                          </span>
+                        )}
+                      </div>
                       <p className="truncate text-xs text-dark-text-muted">{account.user.email}</p>
                       <p className="truncate text-xs text-dark-text-muted/80">
                         {account.workspace.name}
                       </p>
                     </div>
-                    {isSwitching && <span className="text-xs text-dark-text-muted">Signing in...</span>}
+                    {isSwitching && !isSignedOut && (
+                      <span className="text-xs text-dark-text-muted">Signing in...</span>
+                    )}
                   </div>
                 </button>
               );
@@ -204,6 +243,26 @@ export function LoginPage() {
             </p>
           </form>
         )}
+
+        <AccountReauthModal
+          account={reauthAccount}
+          isOpen={reauthAccount !== null}
+          onClose={() => setReauthAccount(null)}
+          onRemove={(account) => setAccountToRemove(account)}
+        />
+        <ConfirmModal
+          isOpen={accountToRemove !== null}
+          title="Remove account from device"
+          message={
+            accountToRemove
+              ? `Remove ${accountToRemove.user.email} from this device? You will need to sign in again to add it back.`
+              : ""
+          }
+          confirmText={isRemovingAccount ? "Removing..." : "Remove"}
+          confirmVariant="danger"
+          onConfirm={() => void handleRemoveAccount()}
+          onCancel={() => setAccountToRemove(null)}
+        />
       </div>
     </div>
   );
