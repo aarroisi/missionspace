@@ -42,6 +42,28 @@ function convertKeysToSnakeCase(obj: any): any {
   return obj;
 }
 
+function extractFirstErrorMessage(errors: unknown): string | null {
+  if (!errors || typeof errors !== "object") {
+    return null;
+  }
+
+  const errorEntries = Object.values(errors as Record<string, unknown>);
+  for (const errorEntry of errorEntries) {
+    if (typeof errorEntry === "string") {
+      return errorEntry;
+    }
+
+    if (Array.isArray(errorEntry)) {
+      const firstString = errorEntry.find((item) => typeof item === "string");
+      if (typeof firstString === "string") {
+        return firstString;
+      }
+    }
+  }
+
+  return null;
+}
+
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
@@ -99,7 +121,16 @@ class ApiClient {
       const error = await response
         .json()
         .catch(() => ({ message: "Request failed" }));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const convertedError = convertKeysToCamelCase(error);
+      const fallbackMessage = `HTTP ${response.status}`;
+
+      const message =
+        (typeof convertedError?.message === "string" && convertedError.message) ||
+        (typeof convertedError?.error === "string" && convertedError.error) ||
+        extractFirstErrorMessage(convertedError?.errors) ||
+        fallbackMessage;
+
+      throw new Error(message);
     }
 
     // Handle 204 No Content responses (e.g., from DELETE)

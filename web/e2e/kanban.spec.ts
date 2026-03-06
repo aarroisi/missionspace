@@ -24,6 +24,100 @@ test.describe("Kanban Board", () => {
     await page.waitForURL(/\/boards\/[a-f0-9-]+/);
   }
 
+  async function addColumn(
+    page: any,
+    name: string,
+    options?: { mobile?: boolean },
+  ) {
+    if (options?.mobile) {
+      await page.getByRole("button", { name: /board actions/i }).click();
+      await page.getByRole("button", { name: /add column/i }).click();
+    } else {
+      await page.getByRole("button", { name: /add column/i }).click();
+    }
+
+    await expect(
+      page.getByRole("heading", { name: /add column/i }),
+    ).toBeVisible();
+
+    const nameInput = page.getByLabel(/column name/i);
+    await nameInput.focus();
+    await page.keyboard.insertText(name);
+    await page.getByRole("button", { name: /create column/i }).click();
+  }
+
+  async function getColumnOrder(page: any): Promise<string[]> {
+    return page
+      .locator('[data-testid^="column-"]')
+      .evaluateAll((els) =>
+        els
+          .map((el) => el.getAttribute("data-testid"))
+          .filter((value): value is string => Boolean(value)),
+      );
+  }
+
+  test("should add a column from desktop header", async ({ page }) => {
+    await createBoard(page);
+
+    await addColumn(page, "Review");
+
+    await expect(page.getByTestId("column-review")).toBeVisible();
+  });
+
+  test("should add a column from mobile board actions menu", async ({
+    page,
+  }) => {
+    await createBoard(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await addColumn(page, "QA", { mobile: true });
+
+    await expect(page.getByTestId("column-qa")).toBeVisible();
+  });
+
+  test("should show validation for duplicate column names", async ({ page }) => {
+    await createBoard(page);
+
+    await addColumn(page, "Review");
+    await expect(page.getByTestId("column-review")).toBeVisible();
+
+    await page.getByRole("button", { name: /add column/i }).click();
+    const nameInput = page.getByLabel(/column name/i);
+    await nameInput.focus();
+    await page.keyboard.insertText("review");
+    await page.getByRole("button", { name: /create column/i }).click();
+
+    await expect(page.getByText(/already exists/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /add column/i }),
+    ).toBeVisible();
+  });
+
+  test("should persist added columns after reload and keep DONE last", async ({
+    page,
+  }) => {
+    await createBoard(page);
+
+    await addColumn(page, "Backlog");
+    await expect(page.getByTestId("column-backlog")).toBeVisible();
+
+    const orderBeforeReload = await getColumnOrder(page);
+    expect(orderBeforeReload[orderBeforeReload.length - 1]).toBe("column-done");
+
+    await page.reload();
+
+    await expect(page.getByTestId("column-backlog")).toBeVisible({
+      timeout: 5000,
+    });
+
+    const orderAfterReload = await getColumnOrder(page);
+    expect(orderAfterReload[orderAfterReload.length - 1]).toBe("column-done");
+    expect(orderAfterReload.indexOf("column-backlog")).toBeGreaterThan(-1);
+    expect(orderAfterReload.indexOf("column-backlog")).toBeLessThan(
+      orderAfterReload.indexOf("column-done"),
+    );
+  });
+
   test("should create a board and add tasks", async ({ page }) => {
     await createBoard(page);
 

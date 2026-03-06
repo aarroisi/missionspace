@@ -3,6 +3,27 @@ import { Board, BoardStatus, Task, PaginatedResponse } from "@/types";
 import { api } from "@/lib/api";
 import { celebrateTaskCompletion } from "@/lib/confetti";
 
+function insertStatusKeepingDoneLast(
+  existingStatuses: BoardStatus[] | undefined,
+  createdStatus: BoardStatus,
+): BoardStatus[] {
+  const currentStatuses = existingStatuses || [];
+
+  const adjustedStatuses = currentStatuses.map((status) => {
+    if (status.isDone && !createdStatus.isDone && status.position >= createdStatus.position) {
+      return { ...status, position: status.position + 1 };
+    }
+
+    return status;
+  });
+
+  return [...adjustedStatuses, createdStatus].sort((a, b) => {
+    if (a.isDone && !b.isDone) return 1;
+    if (!a.isDone && b.isDone) return -1;
+    return a.position - b.position;
+  });
+}
+
 interface BoardState {
   boards: Board[];
   tasks: Record<string, Task[]>;
@@ -150,7 +171,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set((state) => ({
       boards: state.boards.map((b) =>
         b.id === boardId
-          ? { ...b, statuses: [...(b.statuses || []), status] }
+          ? {
+              ...b,
+              statuses: insertStatusKeepingDoneLast(b.statuses, status),
+            }
           : b,
       ),
     }));

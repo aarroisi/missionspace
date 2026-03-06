@@ -45,9 +45,11 @@ import { useBoardStore } from "@/stores/boardStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useToastStore } from "@/stores/toastStore";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
+import { STATUS_COLORS, DEFAULT_STATUS_COLOR } from "@/constants/statusColors";
 import { api } from "@/lib/api";
 import { User, Task } from "@/types";
 import { clsx } from "clsx";
@@ -163,6 +165,7 @@ export function BoardView() {
     fetchTasks,
     fetchChildTasks,
     createTask,
+    createStatus,
     reorderTask,
     updateBoard,
     deleteBoard,
@@ -170,10 +173,16 @@ export function BoardView() {
   } = useBoardStore();
   const { messages, fetchMessages } = useChatStore();
   const { isOwner } = useAuthStore();
+  const { success: toastSuccess, error: toastError } = useToastStore();
   const isMobile = useIsMobile();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskStatusId, setNewTaskStatusId] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+  const [newColumnColor, setNewColumnColor] = useState(DEFAULT_STATUS_COLOR);
+  const [newColumnError, setNewColumnError] = useState<string | null>(null);
+  const [isCreatingColumn, setIsCreatingColumn] = useState(false);
   const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<User[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -435,6 +444,85 @@ export function BoardView() {
     setNewTaskStatusId(statusId);
     setIsAddingTask(true);
     setNewTaskTitle("");
+  };
+
+  const resetAddColumnForm = () => {
+    setNewColumnName("");
+    setNewColumnColor(DEFAULT_STATUS_COLOR);
+    setNewColumnError(null);
+    setIsCreatingColumn(false);
+  };
+
+  const openAddColumnModal = () => {
+    resetAddColumnForm();
+    setIsAddingColumn(true);
+  };
+
+  const closeAddColumnModal = () => {
+    setIsAddingColumn(false);
+    resetAddColumnForm();
+  };
+
+  const mapColumnCreateError = (message: string) => {
+    const normalizedMessage = message.toLowerCase();
+
+    if (
+      normalizedMessage.includes("already been taken") ||
+      normalizedMessage.includes("already exists")
+    ) {
+      return "A column with this name already exists.";
+    }
+
+    if (
+      normalizedMessage.includes("can't be blank") ||
+      normalizedMessage.includes("required")
+    ) {
+      return "Column name is required.";
+    }
+
+    if (normalizedMessage.includes("valid hex color")) {
+      return "Please select a valid column color.";
+    }
+
+    if (normalizedMessage.startsWith("http ")) {
+      return "Failed to add column. Please try again.";
+    }
+
+    return message;
+  };
+
+  const handleCreateColumn = async () => {
+    if (!boardId) return;
+
+    const trimmedName = newColumnName.trim();
+    if (!trimmedName) {
+      setNewColumnError("Column name is required.");
+      return;
+    }
+
+    setIsCreatingColumn(true);
+    setNewColumnError(null);
+
+    try {
+      const status = await createStatus(boardId, {
+        name: trimmedName,
+        color: newColumnColor,
+      });
+
+      toastSuccess(`Column ${status.name} added.`);
+      closeAddColumnModal();
+    } catch (error) {
+      const rawMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to add column. Please try again.";
+      const userMessage = mapColumnCreateError(rawMessage);
+
+      setNewColumnError(userMessage);
+      toastError(userMessage);
+    } finally {
+      setIsCreatingColumn(false);
+    }
   };
 
   const handleCreateTask = async () => {
@@ -705,6 +793,14 @@ export function BoardView() {
             {!isMobile && (
               <>
                 <button
+                  onClick={openAddColumnModal}
+                  className="px-3 py-2 rounded transition-colors text-dark-text-muted hover:bg-dark-surface hover:text-dark-text flex items-center gap-2 text-sm"
+                  title="Add column"
+                >
+                  <Plus size={16} />
+                  <span>Add Column</span>
+                </button>
+                <button
                   onClick={() => setIsStatusManagerOpen(true)}
                   className="p-2 rounded transition-colors text-dark-text-muted hover:bg-dark-surface"
                   title="Manage statuses"
@@ -740,13 +836,23 @@ export function BoardView() {
             <Dropdown
               align="right"
               trigger={
-                <button className="p-2 rounded transition-colors text-dark-text-muted hover:bg-dark-surface">
+                <button
+                  aria-label="Board actions"
+                  title="Board actions"
+                  className="p-2 rounded transition-colors text-dark-text-muted hover:bg-dark-surface"
+                >
                   <MoreHorizontal size={18} />
                 </button>
               }
             >
               {isMobile && (
                 <>
+                  <DropdownItem onClick={openAddColumnModal}>
+                    <span className="flex items-center gap-2">
+                      <Plus size={16} />
+                      Add Column
+                    </span>
+                  </DropdownItem>
                   <DropdownItem onClick={() => setViewMode("board")}>
                     <span className="flex items-center gap-2">
                       <LayoutGrid size={16} className={viewMode === "board" ? "text-blue-400" : ""} />
@@ -866,6 +972,104 @@ export function BoardView() {
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Add Column Modal */}
+      {isAddingColumn && (
+        <Modal
+          title="Add Column"
+          onClose={closeAddColumnModal}
+          size="md"
+          fullScreenOnMobile={false}
+        >
+          <form
+            className="p-6 space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreateColumn();
+            }}
+          >
+            <div>
+              <label
+                htmlFor="quick-add-column-name"
+                className="block text-sm font-medium text-dark-text mb-2"
+              >
+                Column Name
+              </label>
+              <input
+                id="quick-add-column-name"
+                type="text"
+                value={newColumnName}
+                onChange={(event) => {
+                  setNewColumnName(event.target.value);
+                  if (newColumnError) {
+                    setNewColumnError(null);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    closeAddColumnModal();
+                  }
+                }}
+                placeholder="e.g. REVIEW"
+                className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-dark-text placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-dark-text mb-2">Color</p>
+              <div className="grid grid-cols-4 gap-2">
+                {STATUS_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => setNewColumnColor(color.value)}
+                    className={clsx(
+                      "flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-colors",
+                      newColumnColor === color.value
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-dark-border hover:border-dark-text-muted",
+                    )}
+                    aria-label={`Color ${color.name}`}
+                    title={color.name}
+                  >
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: color.value }}
+                    />
+                    <span className="text-xs text-dark-text-muted">
+                      {color.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {newColumnError && (
+              <p role="alert" className="text-sm text-red-400">
+                {newColumnError}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={closeAddColumnModal}
+                className="px-4 py-2 text-dark-text-muted hover:text-dark-text transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!newColumnName.trim() || isCreatingColumn}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreatingColumn ? "Creating..." : "Create Column"}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 

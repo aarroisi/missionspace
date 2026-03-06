@@ -3,6 +3,7 @@ import { Plus, Trash2, GripVertical, ChevronDown, Undo2 } from "lucide-react";
 import { BoardStatus, Task } from "@/types";
 import { useBoardStore } from "@/stores/boardStore";
 import { Modal } from "@/components/ui/Modal";
+import { STATUS_COLORS, DEFAULT_STATUS_COLOR } from "@/constants/statusColors";
 import { clsx } from "clsx";
 
 interface StatusManagerProps {
@@ -11,17 +12,6 @@ interface StatusManagerProps {
   tasks: Task[];
   onClose: () => void;
 }
-
-const STATUS_COLORS = [
-  { name: "Gray", value: "#6b7280" },
-  { name: "Red", value: "#ef4444" },
-  { name: "Orange", value: "#f97316" },
-  { name: "Yellow", value: "#eab308" },
-  { name: "Green", value: "#22c55e" },
-  { name: "Blue", value: "#3b82f6" },
-  { name: "Purple", value: "#8b5cf6" },
-  { name: "Pink", value: "#ec4899" },
-];
 
 interface LocalStatus {
   id: string;
@@ -56,7 +46,7 @@ export function StatusManager({
       })),
   );
   const [newStatusName, setNewStatusName] = useState("");
-  const [newStatusColor, setNewStatusColor] = useState(STATUS_COLORS[0].value);
+  const [newStatusColor, setNewStatusColor] = useState(DEFAULT_STATUS_COLOR);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingColor, setEditingColor] = useState("");
@@ -128,7 +118,7 @@ export function StatusManager({
       : localStatuses;
     setLocalStatuses([...updatedStatuses, newStatus]);
     setNewStatusName("");
-    setNewStatusColor(STATUS_COLORS[0].value);
+    setNewStatusColor(DEFAULT_STATUS_COLOR);
   };
 
   const handleStartEdit = (status: LocalStatus) => {
