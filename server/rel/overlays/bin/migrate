@@ -2,4 +2,4 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-exec ./bridge eval Bridge.Release.migrate
+exec ./missionspace eval Missionspace.Release.migrate

@@ -5,12 +5,12 @@
 - Primary API namespace: `/api`
 - JSON request/response format throughout (`accepts ["json"]` pipeline)
 - Authentication supports both:
-  - Session cookie (`_bridge_key`)
+  - Session cookie (`_missionspace_key`)
   - User API keys (`brk_...`) via header
 
 ## Authentication model
 
-- Session cookie key: `_bridge_key`
+- Session cookie key: `_missionspace_key`
 - Session max age: `1209600` seconds (14 days)
 - Session is set by:
   - `POST /api/auth/register`
@@ -70,8 +70,8 @@ High-level rules:
 - Non-owners can access project items only via project membership.
 - Guests are limited to one project-or-item membership total.
 
-See `lib/bridge/authorization/policy.ex` for exact behavior.
-Scope catalog lives in `lib/bridge/authorization/scopes.ex`.
+See `lib/missionspace/authorization/policy.ex` for exact behavior.
+Scope catalog lives in `lib/missionspace/authorization/scopes.ex`.
 
 ## Pagination
 

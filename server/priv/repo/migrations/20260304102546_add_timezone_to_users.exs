@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddTimezoneToUsers do
+defmodule Missionspace.Repo.Migrations.AddTimezoneToUsers do
   use Ecto.Migration
 
   def change do

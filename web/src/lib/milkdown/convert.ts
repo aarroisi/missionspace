@@ -20,7 +20,7 @@ export function isHtml(content: string): boolean {
 }
 
 /**
- * Custom rehype-remark handlers for Bridge-specific HTML elements.
+ * Custom rehype-remark handlers for Missionspace-specific HTML elements.
  */
 const customHandlers: Record<string, Handle> = {
   // Handle mention spans: <span data-type="mention" data-id="uuid" data-label="Name">@Name</span>
@@ -98,7 +98,7 @@ const customHandlers: Record<string, Handle> = {
 
 /**
  * Converts HTML content to Markdown.
- * Handles standard HTML and Bridge-specific custom nodes (mentions, images, files).
+ * Handles standard HTML and Missionspace-specific custom nodes (mentions, images, files).
  */
 export function htmlToMarkdown(html: string): string {
   if (!html || !html.trim()) return "";

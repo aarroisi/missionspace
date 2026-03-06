@@ -106,10 +106,10 @@ export function DevelopersModal({ isOpen, onClose }: DevelopersModalProps) {
     const verifyEndpoint = apiKey.verifyEndpoint || "/api/api-keys/verify";
 
     return [
-      `export BRIDGE_API_KEY="${apiKey.key}"`,
+      `export MISSIONSPACE_API_KEY="${apiKey.key}"`,
       `curl -s "${verifyEndpoint}" \\`,
       '  -H "Accept: application/json" \\',
-      '  -H "X-API-Key: $BRIDGE_API_KEY"',
+      '  -H "X-API-Key: $MISSIONSPACE_API_KEY"',
     ].join("\n");
   };
 

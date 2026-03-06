@@ -1,6 +1,6 @@
-# Bridge Setup Guide
+# Missionspace Setup Guide
 
-This guide will help you get Bridge up and running on your local machine.
+This guide will help you get Missionspace up and running on your local machine.
 
 ## Prerequisites Check
 
@@ -81,9 +81,9 @@ The seed file creates:
 
 **Users:**
 
-- Alex Kim (alex@bridge.app)
-- Morgan Jones (morgan@bridge.app)
-- Sam Rivera (sam@bridge.app)
+- Alex Kim (alex@missionspace.app)
+- Morgan Jones (morgan@missionspace.app)
+- Sam Rivera (sam@missionspace.app)
 
 **Projects:**
 
@@ -176,7 +176,7 @@ mix run priv/repo/seeds.exs
 
 ### Backend Changes
 
-1. Edit files in `server/lib/bridge/` or `server/lib/bridge_web/`
+1. Edit files in `server/lib/missionspace/` or `server/lib/missionspace_web/`
 2. Phoenix automatically recompiles on save
 3. For new dependencies: `mix deps.get`
 4. For database changes: `mix ecto.gen.migration name` then `mix ecto.migrate`

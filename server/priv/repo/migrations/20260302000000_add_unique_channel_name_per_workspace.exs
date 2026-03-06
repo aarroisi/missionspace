@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddUniqueChannelNamePerWorkspace do
+defmodule Missionspace.Repo.Migrations.AddUniqueChannelNamePerWorkspace do
   use Ecto.Migration
 
   def change do

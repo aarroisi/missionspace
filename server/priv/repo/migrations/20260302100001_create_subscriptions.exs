@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateSubscriptions do
+defmodule Missionspace.Repo.Migrations.CreateSubscriptions do
   use Ecto.Migration
 
   def change do

@@ -1,9 +1,9 @@
 ---
 name: testing
-description: Test-Driven Development practices for Bridge. Use when writing tests, implementing features, or ensuring test coverage. Includes factories, test structure, and meaningful test examples.
+description: Test-Driven Development practices for Missionspace. Use when writing tests, implementing features, or ensuring test coverage. Includes factories, test structure, and meaningful test examples.
 ---
 
-# Bridge Testing Guide
+# Missionspace Testing Guide
 
 ## Development Principle: Test-Driven Development (TDD)
 
@@ -16,11 +16,11 @@ ALWAYS start with writing tests before implementing features:
 
 ## Test Setup
 
-Tests use `BridgeWeb.ConnCase` for controller tests:
+Tests use `MissionspaceWeb.ConnCase` for controller tests:
 
 ```elixir
-defmodule BridgeWeb.DocControllerTest do
-  use BridgeWeb.ConnCase
+defmodule MissionspaceWeb.DocControllerTest do
+  use MissionspaceWeb.ConnCase
 
   setup do
     # Create test data using factories
@@ -44,14 +44,14 @@ Use ExMachina factories (in `test/support/factory.ex`):
 ```elixir
 # Define factories
 def workspace_factory do
-  %Bridge.Accounts.Workspace{
+  %Missionspace.Accounts.Workspace{
     name: "Test Workspace",
     slug: sequence(:slug, &"workspace-#{&1}")
   }
 end
 
 def user_factory do
-  %Bridge.Accounts.User{
+  %Missionspace.Accounts.User{
     name: "Test User",
     email: sequence(:email, &"user-#{&1}@example.com"),
     password_hash: Bcrypt.hash_pwd_salt("password123"),
@@ -60,7 +60,7 @@ def user_factory do
 end
 
 def doc_factory do
-  %Bridge.Docs.Doc{
+  %Missionspace.Docs.Doc{
     title: "Test Doc",
     content: "Test content",
     workspace: build(:workspace),
@@ -138,8 +138,8 @@ end
 Organize tests by controller action:
 
 ```elixir
-defmodule BridgeWeb.DocControllerTest do
-  use BridgeWeb.ConnCase
+defmodule MissionspaceWeb.DocControllerTest do
+  use MissionspaceWeb.ConnCase
 
   describe "index" do
     test "returns all docs in workspace", %{conn: conn} do
@@ -204,10 +204,10 @@ end
 cd server && mix test
 
 # Run specific test file
-mix test test/bridge_web/controllers/doc_controller_test.exs
+mix test test/missionspace_web/controllers/doc_controller_test.exs
 
 # Run specific test
-mix test test/bridge_web/controllers/doc_controller_test.exs:45
+mix test test/missionspace_web/controllers/doc_controller_test.exs:45
 
 # Run tests with coverage
 mix coveralls

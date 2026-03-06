@@ -2,7 +2,7 @@
 
 ## Overview
 
-Users can mention other workspace members inside any text editor using `@Name`. When mentioned, the recipient always receives a real-time notification. Mentions work across all markdown-based content in Bridge.
+Users can mention other workspace members inside any text editor using `@Name`. When mentioned, the recipient always receives a real-time notification. Mentions work across all markdown-based content in Missionspace.
 
 ## Current State
 
@@ -72,7 +72,7 @@ Styled with a distinct background color to stand out from regular text. Clickabl
 
 When content containing mentions is saved:
 
-1. **Extract**: `Bridge.Mentions.extract_mention_ids(html_content)` parses all `data-id` attributes
+1. **Extract**: `Missionspace.Mentions.extract_mention_ids(html_content)` parses all `data-id` attributes
 2. **Diff** (for edits): Compare old vs new mentions to avoid duplicate notifications
 3. **Notify**: For each newly mentioned user:
    - Create a `type: "mention"` notification (never rolled up with other types)

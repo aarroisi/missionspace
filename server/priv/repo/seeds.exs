@@ -5,34 +5,34 @@
 # Inside the script, you can read and write to any of your
 # repositories directly:
 #
-#     Bridge.Repo.insert!(%Bridge.SomeSchema{})
+#     Missionspace.Repo.insert!(%Missionspace.SomeSchema{})
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-alias Bridge.Repo
-alias Bridge.Accounts
-alias Bridge.Projects
-alias Bridge.Lists
-alias Bridge.Docs
-alias Bridge.Chat
+alias Missionspace.Repo
+alias Missionspace.Accounts
+alias Missionspace.Projects
+alias Missionspace.Lists
+alias Missionspace.Docs
+alias Missionspace.Chat
 
 # Clean database
-Repo.delete_all(Bridge.Chat.Message)
-Repo.delete_all(Bridge.Lists.Subtask)
-Repo.delete_all(Bridge.Lists.Task)
-Repo.delete_all(Bridge.Lists.List)
-Repo.delete_all(Bridge.Docs.Doc)
-Repo.delete_all(Bridge.Chat.Channel)
-Repo.delete_all(Bridge.Chat.DirectMessage)
-Repo.delete_all(Bridge.Projects.Project)
-Repo.delete_all(Bridge.Accounts.User)
+Repo.delete_all(Missionspace.Chat.Message)
+Repo.delete_all(Missionspace.Lists.Subtask)
+Repo.delete_all(Missionspace.Lists.Task)
+Repo.delete_all(Missionspace.Lists.List)
+Repo.delete_all(Missionspace.Docs.Doc)
+Repo.delete_all(Missionspace.Chat.Channel)
+Repo.delete_all(Missionspace.Chat.DirectMessage)
+Repo.delete_all(Missionspace.Projects.Project)
+Repo.delete_all(Missionspace.Accounts.User)
 
 # Create users
 {:ok, user1} =
   Accounts.create_user(%{
     name: "Alex Kim",
-    email: "alex@bridge.app",
+    email: "alex@missionspace.app",
     avatar: "AK",
     online: true
   })
@@ -40,7 +40,7 @@ Repo.delete_all(Bridge.Accounts.User)
 {:ok, user2} =
   Accounts.create_user(%{
     name: "Morgan Jones",
-    email: "morgan@bridge.app",
+    email: "morgan@missionspace.app",
     avatar: "MJ",
     online: true
   })
@@ -48,7 +48,7 @@ Repo.delete_all(Bridge.Accounts.User)
 {:ok, user3} =
   Accounts.create_user(%{
     name: "Sam Rivera",
-    email: "sam@bridge.app",
+    email: "sam@missionspace.app",
     avatar: "SR",
     online: false
   })

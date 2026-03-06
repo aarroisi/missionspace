@@ -44,20 +44,20 @@ Clicking a result navigates to:
 - All queries filtered by `workspace_id` (no cross-workspace leakage)
 - Owner sees all shared items + own private items
 - Member/Guest sees: project items + own items + explicitly invited shared items
-- Uses existing `filter_accessible` helpers from `Bridge.Projects`
+- Uses existing `filter_accessible` helpers from `Missionspace.Projects`
 
 ## Backend
 
 - **API:** `GET /api/search?q=query`
-- **Context:** `Bridge.Search.search/3` runs 7 concurrent ILIKE queries using `Task.async`
+- **Context:** `Missionspace.Search.search/3` runs 7 concurrent ILIKE queries using `Task.async`
 - **Performance:** GIN trigram indexes (`pg_trgm`) on all searchable text columns for fast ILIKE matching
 - Task key search uses SQL fragment: `prefix || '-' || sequence_number::text`
 
 ## Key Files
 
-- `server/lib/bridge/search.ex` — search context
-- `server/lib/bridge_web/controllers/search_controller.ex` — controller
-- `server/lib/bridge_web/controllers/search_json.ex` — JSON view
+- `server/lib/missionspace/search.ex` — search context
+- `server/lib/missionspace_web/controllers/search_controller.ex` — controller
+- `server/lib/missionspace_web/controllers/search_json.ex` — JSON view
 - `server/priv/repo/migrations/*_add_search_trigram_indexes.exs` — pg_trgm indexes
 - `web/src/stores/searchStore.ts` — Zustand store
 - `web/src/components/features/SearchModal.tsx` — spotlight modal

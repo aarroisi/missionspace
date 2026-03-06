@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddCompositeIndicesWorkspaceIdId do
+defmodule Missionspace.Repo.Migrations.AddCompositeIndicesWorkspaceIdId do
   use Ecto.Migration
 
   def change do

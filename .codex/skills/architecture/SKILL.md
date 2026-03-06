@@ -1,9 +1,9 @@
 ---
 name: architecture
-description: Bridge project architecture patterns, error handling, multi-tenancy, and UUIDs. Use when implementing new features, refactoring code, or explaining architectural decisions.
+description: Missionspace project architecture patterns, error handling, multi-tenancy, and UUIDs. Use when implementing new features, refactoring code, or explaining architectural decisions.
 ---
 
-# Bridge Architecture Patterns
+# Missionspace Architecture Patterns
 
 ## Error Handling Pattern
 
@@ -33,10 +33,10 @@ end
 Controllers use `with` statements and rely on `FallbackController` for error handling:
 
 ```elixir
-defmodule BridgeWeb.DocController do
-  use BridgeWeb, :controller
+defmodule MissionspaceWeb.DocController do
+  use MissionspaceWeb, :controller
 
-  action_fallback(BridgeWeb.FallbackController)
+  action_fallback(MissionspaceWeb.FallbackController)
 
   # ✅ GOOD - Clean with statement
   def show(conn, %{"id" => id}) do
@@ -81,8 +81,8 @@ schema "docs" do
   field(:title, :string)
   field(:content, :string, default: "")
 
-  belongs_to(:workspace, Bridge.Accounts.Workspace)
-  belongs_to(:author, Bridge.Accounts.User)
+  belongs_to(:workspace, Missionspace.Accounts.Workspace)
+  belongs_to(:author, Missionspace.Accounts.User)
 
   timestamps()
 end
@@ -145,7 +145,7 @@ All API endpoints require authentication via session cookies and workspace conte
 
 ## Role-Based Access Control (RBAC)
 
-Bridge implements a role-based permission system with three roles:
+Missionspace implements a role-based permission system with three roles:
 
 ### Roles
 
@@ -176,7 +176,7 @@ Bridge implements a role-based permission system with three roles:
 Authorization is implemented via plugs in controllers:
 
 ```elixir
-defmodule BridgeWeb.DocController do
+defmodule MissionspaceWeb.DocController do
   plug :load_resource when action in [:show, :update, :delete]
   plug :authorize, :view_item when action in [:show]
   plug :authorize, :create_item when action in [:create]
@@ -212,7 +212,7 @@ end
 
 ### Policy Module
 
-The `Bridge.Authorization.Policy` module defines all permission rules:
+The `Missionspace.Authorization.Policy` module defines all permission rules:
 
 ```elixir
 # Owner can do anything

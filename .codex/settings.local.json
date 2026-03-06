@@ -7,9 +7,9 @@
       "WebFetch(domain:www.fizzy.do)",
       "Bash(npm install @milkdown/kit @milkdown/react @milkdown/crepe remark-directive)",
       "Bash(npm install unified rehype-parse rehype-remark remark-stringify remark-parse remark-rehype rehype-stringify rehype-sanitize)",
-      "Bash(ls /Users/aarroisi/Projects/bridge/web/node_modules/@milkdown/core/lib/*.d.ts)",
-      "Bash(ls /Users/aarroisi/Projects/bridge/web/node_modules/@milkdown/preset-commonmark/lib/*.d.ts)",
-      "Bash(grep -r \"DefaultValue\" /Users/aarroisi/Projects/bridge/web/node_modules/@milkdown/core/lib/*.d.ts)"
+      "Bash(ls /Users/aarroisi/Projects/missionspace/web/node_modules/@milkdown/core/lib/*.d.ts)",
+      "Bash(ls /Users/aarroisi/Projects/missionspace/web/node_modules/@milkdown/preset-commonmark/lib/*.d.ts)",
+      "Bash(grep -r \"DefaultValue\" /Users/aarroisi/Projects/missionspace/web/node_modules/@milkdown/core/lib/*.d.ts)"
     ]
   }
 }

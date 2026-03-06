@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateApiKeys do
+defmodule Missionspace.Repo.Migrations.CreateApiKeys do
   use Ecto.Migration
 
   def change do

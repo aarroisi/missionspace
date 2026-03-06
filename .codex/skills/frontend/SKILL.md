@@ -1,10 +1,10 @@
 ---
 name: frontend
-description: React/TypeScript frontend development patterns for Bridge. Use when working on components, pages, state management, or UI. Includes critical Playwright testing gotchas.
+description: React/TypeScript frontend development patterns for Missionspace. Use when working on components, pages, state management, or UI. Includes critical Playwright testing gotchas.
 user-invocable: false
 ---
 
-# Bridge Frontend Development
+# Missionspace Frontend Development
 
 ## Context
 

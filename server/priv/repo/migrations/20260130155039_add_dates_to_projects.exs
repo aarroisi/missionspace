@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddDatesToProjects do
+defmodule Missionspace.Repo.Migrations.AddDatesToProjects do
   use Ecto.Migration
 
   def change do

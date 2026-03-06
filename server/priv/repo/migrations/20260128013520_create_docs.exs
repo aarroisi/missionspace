@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateDocs do
+defmodule Missionspace.Repo.Migrations.CreateDocs do
   use Ecto.Migration
 
   def change do

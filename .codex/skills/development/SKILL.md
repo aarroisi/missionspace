@@ -1,20 +1,20 @@
 ---
 name: development
-description: Development workflow, commands, and project structure for Bridge. Use when setting up the project, running servers, or navigating the monorepo.
+description: Development workflow, commands, and project structure for Missionspace. Use when setting up the project, running servers, or navigating the monorepo.
 ---
 
-# Bridge Development Workflow
+# Missionspace Development Workflow
 
 ## Project Structure
 
 This is a **monorepo** containing multiple projects:
 
 ```
-bridge/
+missionspace/
 ├── server/          # Elixir/Phoenix backend API
 │   ├── lib/
-│   │   ├── bridge/           # Context modules (business logic)
-│   │   └── bridge_web/       # Controllers, channels, views
+│   │   ├── missionspace/           # Context modules (business logic)
+│   │   └── missionspace_web/       # Controllers, channels, views
 │   ├── test/                 # Backend tests
 │   ├── mix.exs              # Elixir dependencies
 │   └── config/              # Backend configuration
@@ -126,7 +126,7 @@ npm run format         # Format code with Prettier
 
 ## Project Overview
 
-Bridge is a team collaboration platform built with:
+Missionspace is a team collaboration platform built with:
 
 - **Backend**: Elixir/Phoenix (server/)
 - **Frontend**: React/TypeScript with Vite (web/)

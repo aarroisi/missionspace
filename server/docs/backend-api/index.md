@@ -1,10 +1,10 @@
-# Bridge Backend API Docs
+# Missionspace Backend API Docs
 
 This documentation covers every backend API currently exposed by the server:
 
-- HTTP routes in `lib/bridge_web/router.ex`
-- WebSocket channels in `lib/bridge_web/channels/*.ex`
-- Transport endpoints in `lib/bridge_web/endpoint.ex`
+- HTTP routes in `lib/missionspace_web/router.ex`
+- WebSocket channels in `lib/missionspace_web/channels/*.ex`
+- Transport endpoints in `lib/missionspace_web/endpoint.ex`
 
 These pages are written for agents and automation, not marketing docs.
 
@@ -28,8 +28,8 @@ These pages are written for agents and automation, not marketing docs.
 ## Source of truth
 
 - Route inventory command: `mix phx.routes`
-- HTTP route definition: `lib/bridge_web/router.ex`
-- Socket transports: `lib/bridge_web/endpoint.ex`
-- Channel topics and events: `lib/bridge_web/channels/*.ex`
+- HTTP route definition: `lib/missionspace_web/router.ex`
+- Socket transports: `lib/missionspace_web/endpoint.ex`
+- Channel topics and events: `lib/missionspace_web/channels/*.ex`
 
 If generated docs and source disagree, source code wins.

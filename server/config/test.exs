@@ -5,23 +5,23 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :bridge, Bridge.Repo,
+config :missionspace, Missionspace.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "bridge_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: "missionspace_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :bridge, BridgeWeb.Endpoint,
+config :missionspace, MissionspaceWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "MhfT3yrDwylbkz8YPjU3As+gwE99yMryhcMob+uxFsKXAxdW/BAmJkb9h4GT4pRp",
   server: false
 
 # In test we don't send emails
-config :bridge, Bridge.Mailer, adapter: Swoosh.Adapters.Test
+config :missionspace, Missionspace.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
@@ -37,7 +37,7 @@ config :phoenix,
   sort_verified_routes_query_params: true
 
 # Mock R2 storage configuration for tests
-config :bridge, :r2,
+config :missionspace, :r2,
   access_key_id: "test_access_key",
   secret_access_key: "test_secret_key",
   bucket: "test-bucket",
@@ -46,4 +46,4 @@ config :bridge, :r2,
   public_url: "https://test-bucket.example.com"
 
 # Use mock storage in tests
-config :bridge, :storage_adapter, :mock
+config :missionspace, :storage_adapter, :mock

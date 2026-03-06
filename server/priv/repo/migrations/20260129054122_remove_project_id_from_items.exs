@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.RemoveProjectIdFromItems do
+defmodule Missionspace.Repo.Migrations.RemoveProjectIdFromItems do
   use Ecto.Migration
 
   def change do

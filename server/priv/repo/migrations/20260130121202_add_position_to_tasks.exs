@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddPositionToTasks do
+defmodule Missionspace.Repo.Migrations.AddPositionToTasks do
   use Ecto.Migration
 
   def up do

@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddEmailVerificationAndPasswordReset do
+defmodule Missionspace.Repo.Migrations.AddEmailVerificationAndPasswordReset do
   use Ecto.Migration
 
   def change do

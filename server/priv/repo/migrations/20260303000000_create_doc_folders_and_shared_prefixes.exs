@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateDocFoldersAndSharedPrefixes do
+defmodule Missionspace.Repo.Migrations.CreateDocFoldersAndSharedPrefixes do
   use Ecto.Migration
 
   def up do

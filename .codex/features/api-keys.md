@@ -13,7 +13,7 @@ Add user-scoped API keys with scope-based authorization so users can automate AP
 
 ## Scope model
 
-- Scope catalog lives in `server/lib/bridge/authorization/scopes.ex`.
+- Scope catalog lives in `server/lib/missionspace/authorization/scopes.ex`.
 - Authorization flow is now:
   1. Check required scope for action.
   2. If scope is present, run resource-level policy checks.

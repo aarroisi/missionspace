@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddSoftDeleteToUsers do
+defmodule Missionspace.Repo.Migrations.AddSoftDeleteToUsers do
   use Ecto.Migration
 
   def change do

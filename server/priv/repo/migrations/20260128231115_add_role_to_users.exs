@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddRoleToUsers do
+defmodule Missionspace.Repo.Migrations.AddRoleToUsers do
   use Ecto.Migration
 
   def change do

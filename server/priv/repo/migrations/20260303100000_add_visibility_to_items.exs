@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddVisibilityToItems do
+defmodule Missionspace.Repo.Migrations.AddVisibilityToItems do
   use Ecto.Migration
 
   def up do

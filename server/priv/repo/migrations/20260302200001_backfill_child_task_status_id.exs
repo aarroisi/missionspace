@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.BackfillChildTaskStatusId do
+defmodule Missionspace.Repo.Migrations.BackfillChildTaskStatusId do
   use Ecto.Migration
 
   def up do

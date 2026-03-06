@@ -12,17 +12,17 @@ import Config
 # If you use `mix release`, you need to explicitly enable the server
 # by passing the PHX_SERVER=true when you start it:
 #
-#     PHX_SERVER=true bin/bridge start
+#     PHX_SERVER=true bin/missionspace start
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
-  config :bridge, BridgeWeb.Endpoint, server: true
+  config :missionspace, MissionspaceWeb.Endpoint, server: true
 end
 
 # Resend email adapter (production)
 if System.get_env("RESEND_API_KEY") do
-  config :bridge, Bridge.Mailer,
+  config :missionspace, Missionspace.Mailer,
     adapter: Swoosh.Adapters.Resend,
     api_key: System.get_env("RESEND_API_KEY")
 
@@ -30,20 +30,20 @@ if System.get_env("RESEND_API_KEY") do
 end
 
 if System.get_env("FROM_EMAIL") do
-  config :bridge, :from_email, System.get_env("FROM_EMAIL")
+  config :missionspace, :from_email, System.get_env("FROM_EMAIL")
 end
 
 if System.get_env("FRONTEND_URL") do
-  config :bridge, :frontend_url, System.get_env("FRONTEND_URL")
+  config :missionspace, :frontend_url, System.get_env("FRONTEND_URL")
 end
 
 if cors = System.get_env("CORS_ORIGINS") do
   origins = String.split(cors, ",", trim: true)
-  config :bridge, :cors_origins, origins
-  config :bridge, BridgeWeb.Endpoint, check_origin: origins
+  config :missionspace, :cors_origins, origins
+  config :missionspace, MissionspaceWeb.Endpoint, check_origin: origins
 end
 
-config :bridge, BridgeWeb.Endpoint,
+config :missionspace, MissionspaceWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 # Web Push VAPID configuration
@@ -57,7 +57,7 @@ end
 # Cloudflare R2 Storage Configuration
 # R2 uses S3-compatible API with presigned URLs for all access
 if System.get_env("R2_ACCESS_KEY_ID") do
-  config :bridge, :r2,
+  config :missionspace, :r2,
     access_key_id: System.get_env("R2_ACCESS_KEY_ID"),
     secret_access_key: System.get_env("R2_SECRET_ACCESS_KEY"),
     bucket: System.get_env("R2_BUCKET"),
@@ -85,7 +85,7 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-  config :bridge, Bridge.Repo,
+  config :missionspace, Missionspace.Repo,
     # ssl: true,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
@@ -107,9 +107,9 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
-  config :bridge, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :missionspace, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  config :bridge, BridgeWeb.Endpoint,
+  config :missionspace, MissionspaceWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
       # Enable IPv6 and bind on all interfaces.
@@ -125,7 +125,7 @@ if config_env() == :prod do
   # To get SSL working, you will need to add the `https` key
   # to your endpoint configuration:
   #
-  #     config :bridge, BridgeWeb.Endpoint,
+  #     config :missionspace, MissionspaceWeb.Endpoint,
   #       https: [
   #         ...,
   #         port: 443,
@@ -147,7 +147,7 @@ if config_env() == :prod do
   # We also recommend setting `force_ssl` in your config/prod.exs,
   # ensuring no data is ever sent via http, always redirecting to https:
   #
-  #     config :bridge, BridgeWeb.Endpoint,
+  #     config :missionspace, MissionspaceWeb.Endpoint,
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
@@ -157,7 +157,7 @@ if config_env() == :prod do
   # In production you need to configure the mailer to use a different adapter.
   # Here is an example configuration for Mailgun:
   #
-  #     config :bridge, Bridge.Mailer,
+  #     config :missionspace, Missionspace.Mailer,
   #       adapter: Swoosh.Adapters.Mailgun,
   #       api_key: System.get_env("MAILGUN_API_KEY"),
   #       domain: System.get_env("MAILGUN_DOMAIN")

@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddLogoToWorkspaces do
+defmodule Missionspace.Repo.Migrations.AddLogoToWorkspaces do
   use Ecto.Migration
 
   def change do

@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddCompletedAtToTasksAndSubtasks do
+defmodule Missionspace.Repo.Migrations.AddCompletedAtToTasksAndSubtasks do
   use Ecto.Migration
 
   def change do

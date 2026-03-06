@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.MakeNotificationEntityFieldsNullable do
+defmodule Missionspace.Repo.Migrations.MakeNotificationEntityFieldsNullable do
   use Ecto.Migration
 
   def change do

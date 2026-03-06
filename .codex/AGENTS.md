@@ -1,6 +1,6 @@
-# Bridge Project
+# Missionspace Project
 
-Bridge is a team collaboration platform: Elixir/Phoenix backend + React/TypeScript frontend.
+Missionspace is a team collaboration platform: Elixir/Phoenix backend + React/TypeScript frontend.
 
 ## Quick Reference
 

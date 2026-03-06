@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddSearchTrigramIndexes do
+defmodule Missionspace.Repo.Migrations.AddSearchTrigramIndexes do
   use Ecto.Migration
 
   def up do

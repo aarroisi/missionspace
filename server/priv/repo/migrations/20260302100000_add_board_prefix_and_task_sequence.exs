@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddBoardPrefixAndTaskSequence do
+defmodule Missionspace.Repo.Migrations.AddBoardPrefixAndTaskSequence do
   use Ecto.Migration
 
   def up do

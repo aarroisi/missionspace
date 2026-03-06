@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.BackfillCompletedAtForDoneTasks do
+defmodule Missionspace.Repo.Migrations.BackfillCompletedAtForDoneTasks do
   use Ecto.Migration
 
   def up do

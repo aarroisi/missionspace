@@ -42,7 +42,7 @@ className={clsx(
 3. **Use browser DevTools** - Inspect element, see which class is winning (crossed out = losing)
 4. **Use either/or pattern** - Never have both base and highlight color classes applied simultaneously
 
-### Real Example from Bridge
+### Real Example from Missionspace
 
 ```typescript
 // Before (broken):

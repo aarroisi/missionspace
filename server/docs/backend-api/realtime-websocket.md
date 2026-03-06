@@ -7,9 +7,9 @@
 | Phoenix Socket | `/socket/websocket` | Token in connect params |
 | Phoenix LiveView Socket | `/live/websocket` | LiveView session transport |
 
-Primary realtime API for app features is `/socket/websocket` with `BridgeWeb.UserSocket`.
+Primary realtime API for app features is `/socket/websocket` with `MissionspaceWeb.UserSocket`.
 
-## Socket auth (`BridgeWeb.UserSocket`)
+## Socket auth (`MissionspaceWeb.UserSocket`)
 
 - Client must pass connect params:
 
@@ -28,14 +28,14 @@ Note: multiple channel modules expect `socket.assigns.workspace_id`; ensure your
 
 | Topic pattern | Module |
 | --- | --- |
-| `list:*` | `BridgeWeb.ListChannel` |
-| `task:*` | `BridgeWeb.TaskChannel` |
-| `doc:*` | `BridgeWeb.DocChannel` |
-| `channel:*` | `BridgeWeb.ChatChannel` |
-| `dm:*` | `BridgeWeb.ChatChannel` |
-| `notifications:*` | `BridgeWeb.NotificationChannel` |
+| `list:*` | `MissionspaceWeb.ListChannel` |
+| `task:*` | `MissionspaceWeb.TaskChannel` |
+| `doc:*` | `MissionspaceWeb.DocChannel` |
+| `channel:*` | `MissionspaceWeb.ChatChannel` |
+| `dm:*` | `MissionspaceWeb.ChatChannel` |
+| `notifications:*` | `MissionspaceWeb.NotificationChannel` |
 
-## `list:<list_id>` (`BridgeWeb.ListChannel`)
+## `list:<list_id>` (`MissionspaceWeb.ListChannel`)
 
 ### Join
 
@@ -58,7 +58,7 @@ Note: multiple channel modules expect `socket.assigns.workspace_id`; ensure your
 | `task_updated` | `{ "task": Task }` |
 | `task_deleted` | `{ "task_id": "uuid" }` |
 
-## `task:<task_id>` (`BridgeWeb.TaskChannel`)
+## `task:<task_id>` (`MissionspaceWeb.TaskChannel`)
 
 ### Join
 
@@ -83,7 +83,7 @@ Note: multiple channel modules expect `socket.assigns.workspace_id`; ensure your
 | `comment_added` | `{ "comment": Message, "task_id": "uuid" }` |
 | `user_assigned` | `{ "task_id": "uuid", "assignee": User, "task": Task }` |
 
-## `doc:<doc_id>` (`BridgeWeb.DocChannel`)
+## `doc:<doc_id>` (`MissionspaceWeb.DocChannel`)
 
 ### Join
 
@@ -109,7 +109,7 @@ Note: multiple channel modules expect `socket.assigns.workspace_id`; ensure your
 | `comment_added` | `{ "comment": Message, "doc_id": "uuid" }` |
 | `cursor_moved` | `{ "user_id": "uuid", "position": ..., "doc_id": "uuid" }` |
 
-## `channel:<channel_id>` and `dm:<dm_id>` (`BridgeWeb.ChatChannel`)
+## `channel:<channel_id>` and `dm:<dm_id>` (`MissionspaceWeb.ChatChannel`)
 
 ### Join
 
@@ -145,7 +145,7 @@ Note: multiple channel modules expect `socket.assigns.workspace_id`; ensure your
 | `presence_state` | Phoenix Presence state |
 | `presence_diff` | Phoenix Presence diff |
 
-## `notifications:<user_id>` (`BridgeWeb.NotificationChannel`)
+## `notifications:<user_id>` (`MissionspaceWeb.NotificationChannel`)
 
 ### Join
 
@@ -154,4 +154,4 @@ Note: multiple channel modules expect `socket.assigns.workspace_id`; ensure your
 ### Server broadcasts
 
 - Event: `new_notification`
-- Trigger helper: `BridgeWeb.NotificationChannel.broadcast_notification(user_id, payload)`
+- Trigger helper: `MissionspaceWeb.NotificationChannel.broadcast_notification(user_id, payload)`

@@ -1,6 +1,6 @@
 # E2E Tests
 
-End-to-end tests for the Bridge application using Playwright.
+End-to-end tests for the Missionspace application using Playwright.
 
 ## What These Tests Do
 

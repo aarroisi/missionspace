@@ -1,4 +1,4 @@
-defmodule BridgeWeb.ConnCase do
+defmodule MissionspaceWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
@@ -11,7 +11,7 @@ defmodule BridgeWeb.ConnCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use BridgeWeb.ConnCase, async: true`, although
+  by setting `use MissionspaceWeb.ConnCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -20,20 +20,20 @@ defmodule BridgeWeb.ConnCase do
   using do
     quote do
       # The default endpoint for testing
-      @endpoint BridgeWeb.Endpoint
+      @endpoint MissionspaceWeb.Endpoint
 
-      use BridgeWeb, :verified_routes
+      use MissionspaceWeb, :verified_routes
 
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
-      import BridgeWeb.ConnCase
-      import Bridge.Factory
+      import MissionspaceWeb.ConnCase
+      import Missionspace.Factory
     end
   end
 
   setup tags do
-    Bridge.DataCase.setup_sandbox(tags)
+    Missionspace.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

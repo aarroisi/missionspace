@@ -7,19 +7,19 @@
 # General application configuration
 import Config
 
-config :bridge,
-  ecto_repos: [Bridge.Repo],
+config :missionspace,
+  ecto_repos: [Missionspace.Repo],
   generators: [timestamp_type: :utc_datetime_usec]
 
 # Configure the endpoint
-config :bridge, BridgeWeb.Endpoint,
+config :missionspace, MissionspaceWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [json: BridgeWeb.ErrorJSON],
+    formats: [json: MissionspaceWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Bridge.PubSub,
+  pubsub_server: Missionspace.PubSub,
   live_view: [signing_salt: "RCwyDsWd"]
 
 # Configure the mailer
@@ -29,11 +29,11 @@ config :bridge, BridgeWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :bridge, Bridge.Mailer, adapter: Swoosh.Adapters.Local
+config :missionspace, Missionspace.Mailer, adapter: Swoosh.Adapters.Local
 
 # Email sender and frontend URL
-config :bridge, :from_email, "noreply@missionspace.co"
-config :bridge, :frontend_url, "http://localhost:5173"
+config :missionspace, :from_email, "noreply@missionspace.co"
+config :missionspace, :frontend_url, "http://localhost:5173"
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,

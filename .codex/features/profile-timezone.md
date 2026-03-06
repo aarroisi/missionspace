@@ -27,9 +27,9 @@ Users can save their time zone in their profile settings. This prepares teammate
 ## Key Files
 
 - `server/priv/repo/migrations/20260304102546_add_timezone_to_users.exs`
-- `server/lib/bridge/accounts/user.ex`
-- `server/lib/bridge_web/controllers/auth_controller.ex`
-- `server/lib/bridge_web/controllers/workspace_member_json.ex`
+- `server/lib/missionspace/accounts/user.ex`
+- `server/lib/missionspace_web/controllers/auth_controller.ex`
+- `server/lib/missionspace_web/controllers/workspace_member_json.ex`
 - `web/src/components/features/ProfileModal.tsx`
 - `web/src/stores/authStore.ts`
 - `web/src/types/index.ts`

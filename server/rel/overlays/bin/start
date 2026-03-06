@@ -4,7 +4,7 @@ set -eu
 cd -P -- "$(dirname -- "$0")"
 
 echo "Running migrations..."
-./bridge eval Bridge.Release.migrate
+./missionspace eval Missionspace.Release.migrate
 
 echo "Starting server..."
-PHX_SERVER=true exec ./bridge start
+PHX_SERVER=true exec ./missionspace start

@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddCreatedByToListsAndChannels do
+defmodule Missionspace.Repo.Migrations.AddCreatedByToListsAndChannels do
   use Ecto.Migration
 
   def change do

@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.UppercaseStatusNames do
+defmodule Missionspace.Repo.Migrations.UppercaseStatusNames do
   use Ecto.Migration
 
   def up do

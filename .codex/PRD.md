@@ -1,10 +1,10 @@
-# Bridge — Product Requirements Document
+# Missionspace — Product Requirements Document
 
 ## Executive Summary
 
-Bridge is a team collaboration app centered on **Docs** (rich text posts) and **Lists** (task management), with **Chat** as the connective communication layer. It combines the best of Slack's lists/canvases, Basecamp's message boards, and modern task management—without the bloat.
+Missionspace is a team collaboration app centered on **Docs** (rich text posts) and **Lists** (task management), with **Chat** as the connective communication layer. It combines the best of Slack's lists/canvases, Basecamp's message boards, and modern task management—without the bloat.
 
-**Name Rationale:** Like a ship's bridge where the captain commands and has full visibility, Bridge is where teams steer their projects. It also represents connection—bridging people, ideas, and work artifacts together.
+**Name Rationale:** Like a ship's missionspace where the captain commands and has full visibility, Missionspace is where teams steer their projects. It also represents connection—bridging people, ideas, and work artifacts together.
 
 **Core Philosophy:**
 
@@ -436,17 +436,17 @@ Same as Channel View, but:
 ### 6.3 Repository Structure
 
 ```
-bridge/
+missionspace/
 ├── server/                       # Phoenix backend
 │   ├── lib/
-│   │   ├── bridge/              # Business logic
+│   │   ├── missionspace/              # Business logic
 │   │   │   ├── accounts/        # Users, auth
 │   │   │   ├── projects/        # Projects context
 │   │   │   ├── lists/           # Lists, tasks, subtasks
 │   │   │   ├── docs/            # Docs context
 │   │   │   └── chat/            # Channels, DMs, messages
 │   │   │
-│   │   └── bridge_web/          # Web layer
+│   │   └── missionspace_web/          # Web layer
 │   │       ├── controllers/     # REST API
 │   │       ├── channels/        # WebSocket channels
 │   │       │   ├── user_socket.ex
@@ -558,7 +558,7 @@ bridge/
 
 ```json
 {
-  "name": "bridge-web",
+  "name": "missionspace-web",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -617,8 +617,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/*.png"],
       manifest: {
-        name: "Bridge",
-        short_name: "Bridge",
+        name: "Missionspace",
+        short_name: "Missionspace",
         description: "Where teams steer their projects",
         theme_color: "#0f172a",
         background_color: "#0f172a",
@@ -668,8 +668,8 @@ export default defineConfig({
 **Example channel (Elixir):**
 
 ```elixir
-defmodule BridgeWeb.ChatChannel do
-  use BridgeWeb, :channel
+defmodule MissionspaceWeb.ChatChannel do
+  use MissionspaceWeb, :channel
 
   def join("chat:" <> channel_id, _params, socket) do
     send(self(), :after_join)
@@ -1157,8 +1157,8 @@ DELETE /api/comments/:id
 # - PostgreSQL 15+
 
 # Clone and setup
-git clone https://github.com/yourusername/bridge.git
-cd bridge
+git clone https://github.com/yourusername/missionspace.git
+cd missionspace
 
 # Start PostgreSQL (via Docker)
 docker-compose up -d
@@ -1197,11 +1197,11 @@ npm run build
 # Server
 DATABASE_URL=postgres://...
 SECRET_KEY_BASE=...
-PHX_HOST=bridge.example.com
+PHX_HOST=missionspace.example.com
 
 # Client
-VITE_API_URL=https://api.bridge.example.com
-VITE_WS_URL=wss://api.bridge.example.com
+VITE_API_URL=https://api.missionspace.example.com
+VITE_WS_URL=wss://api.missionspace.example.com
 ```
 
 ---

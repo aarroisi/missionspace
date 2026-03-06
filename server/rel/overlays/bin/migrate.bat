@@ -1,1 +1,1 @@
-call "%~dp0\bridge" eval Bridge.Release.migrate
+call "%~dp0\missionspace" eval Missionspace.Release.migrate

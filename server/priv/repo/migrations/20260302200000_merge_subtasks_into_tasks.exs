@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.MergeSubtasksIntoTasks do
+defmodule Missionspace.Repo.Migrations.MergeSubtasksIntoTasks do
   use Ecto.Migration
 
   def up do

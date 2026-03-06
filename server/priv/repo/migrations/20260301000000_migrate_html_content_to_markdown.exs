@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.MigrateHtmlContentToMarkdown do
+defmodule Missionspace.Repo.Migrations.MigrateHtmlContentToMarkdown do
   use Ecto.Migration
 
   import Ecto.Query

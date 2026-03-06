@@ -1,32 +1,32 @@
-defmodule Bridge.Factory do
-  use ExMachina.Ecto, repo: Bridge.Repo
+defmodule Missionspace.Factory do
+  use ExMachina.Ecto, repo: Missionspace.Repo
 
   def workspace_factory do
-    %Bridge.Accounts.Workspace{
+    %Missionspace.Accounts.Workspace{
       name: Faker.Company.name(),
       slug: sequence(:slug, &"workspace-#{&1}")
     }
   end
 
   def user_factory do
-    %Bridge.Accounts.User{
+    %Missionspace.Accounts.User{
       name: Faker.Person.name(),
       email: sequence(:email, &"user-#{&1}@example.com"),
-      password_hash: Bridge.Accounts.User.hash_password("password123"),
+      password_hash: Missionspace.Accounts.User.hash_password("password123"),
       role: "owner",
       email_verified_at: DateTime.utc_now()
     }
   end
 
   def project_factory do
-    %Bridge.Projects.Project{
+    %Missionspace.Projects.Project{
       name: Faker.Lorem.sentence(2..4),
       starred: false
     }
   end
 
   def doc_folder_factory do
-    %Bridge.Docs.DocFolder{
+    %Missionspace.Docs.DocFolder{
       name: Faker.Lorem.sentence(2..4),
       prefix: sequence(:doc_folder_prefix, &String.upcase("D#{&1}")),
       doc_sequence_counter: 0,
@@ -35,7 +35,7 @@ defmodule Bridge.Factory do
   end
 
   def prefix_factory do
-    %Bridge.Namespaces.Prefix{
+    %Missionspace.Namespaces.Prefix{
       prefix: sequence(:ns_prefix, &String.upcase("P#{&1}")),
       entity_type: "list",
       entity_id: UUIDv7.generate()
@@ -43,7 +43,7 @@ defmodule Bridge.Factory do
   end
 
   def doc_factory do
-    %Bridge.Docs.Doc{
+    %Missionspace.Docs.Doc{
       title: Faker.Lorem.sentence(3..6),
       content: Faker.Lorem.paragraph(2..5),
       starred: false,
@@ -52,7 +52,7 @@ defmodule Bridge.Factory do
   end
 
   def list_factory do
-    %Bridge.Lists.List{
+    %Missionspace.Lists.List{
       name: Faker.Lorem.sentence(2..4),
       prefix: sequence(:prefix, &String.upcase("T#{&1}")),
       starred: false
@@ -60,7 +60,7 @@ defmodule Bridge.Factory do
   end
 
   def list_status_factory do
-    %Bridge.Lists.ListStatus{
+    %Missionspace.Lists.ListStatus{
       name: sequence(:status_name, &"status-#{&1}"),
       color: "#6b7280",
       position: 0
@@ -68,7 +68,7 @@ defmodule Bridge.Factory do
   end
 
   def task_factory do
-    %Bridge.Lists.Task{
+    %Missionspace.Lists.Task{
       title: Faker.Lorem.sentence(3..6),
       sequence_number: sequence(:task_seq, &(&1 + 10000)),
       notes: Faker.Lorem.paragraph(1..3),
@@ -77,18 +77,18 @@ defmodule Bridge.Factory do
   end
 
   def channel_factory do
-    %Bridge.Chat.Channel{
+    %Missionspace.Chat.Channel{
       name: sequence(:channel_name, &"#channel-#{&1}"),
       starred: false
     }
   end
 
   def direct_message_factory do
-    %Bridge.Chat.DirectMessage{}
+    %Missionspace.Chat.DirectMessage{}
   end
 
   def message_factory do
-    %Bridge.Chat.Message{
+    %Missionspace.Chat.Message{
       text: Faker.Lorem.sentence(5..15),
       entity_type: "channel",
       entity_id: UUIDv7.generate()
@@ -96,25 +96,25 @@ defmodule Bridge.Factory do
   end
 
   def project_member_factory do
-    %Bridge.Projects.ProjectMember{}
+    %Missionspace.Projects.ProjectMember{}
   end
 
   def project_item_factory do
-    %Bridge.Projects.ProjectItem{
+    %Missionspace.Projects.ProjectItem{
       item_type: "doc_folder",
       item_id: UUIDv7.generate()
     }
   end
 
   def item_member_factory do
-    %Bridge.Projects.ItemMember{
+    %Missionspace.Projects.ItemMember{
       item_type: "channel",
       item_id: UUIDv7.generate()
     }
   end
 
   def notification_factory do
-    %Bridge.Notifications.Notification{
+    %Missionspace.Notifications.Notification{
       type: "mention",
       item_type: "channel",
       item_id: UUIDv7.generate(),
@@ -126,14 +126,14 @@ defmodule Bridge.Factory do
   end
 
   def subscription_factory do
-    %Bridge.Subscriptions.Subscription{
+    %Missionspace.Subscriptions.Subscription{
       item_type: "task",
       item_id: UUIDv7.generate()
     }
   end
 
   def read_position_factory do
-    %Bridge.Chat.ReadPosition{
+    %Missionspace.Chat.ReadPosition{
       item_type: "channel",
       item_id: UUIDv7.generate(),
       last_read_at: DateTime.utc_now()
@@ -141,7 +141,7 @@ defmodule Bridge.Factory do
   end
 
   def asset_factory do
-    %Bridge.Assets.Asset{
+    %Missionspace.Assets.Asset{
       filename: sequence(:filename, &"file-#{&1}.png"),
       content_type: "image/png",
       size_bytes: Enum.random(1000..1_000_000),

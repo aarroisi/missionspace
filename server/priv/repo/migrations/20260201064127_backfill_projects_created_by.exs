@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.BackfillProjectsCreatedBy do
+defmodule Missionspace.Repo.Migrations.BackfillProjectsCreatedBy do
   use Ecto.Migration
 
   def up do

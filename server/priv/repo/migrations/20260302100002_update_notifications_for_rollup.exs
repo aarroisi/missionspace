@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.UpdateNotificationsForRollup do
+defmodule Missionspace.Repo.Migrations.UpdateNotificationsForRollup do
   use Ecto.Migration
 
   def change do

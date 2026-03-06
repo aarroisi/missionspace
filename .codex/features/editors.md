@@ -1,6 +1,6 @@
 # Rich Text Editors Inventory
 
-All rich text editors in Bridge use a single unified `RichTextEditor` component
+All rich text editors in Missionspace use a single unified `RichTextEditor` component
 (`src/lib/milkdown/RichTextEditor.tsx`) that bundles the toolbar, node plugins,
 and Milkdown editor into one place. Every editor has identical functionality;
 only styling differs via props.

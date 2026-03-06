@@ -1,11 +1,11 @@
 import Config
 
 # Configure your database
-config :bridge, Bridge.Repo,
+config :missionspace, Missionspace.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "bridge_dev",
+  database: "missionspace_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -16,7 +16,7 @@ config :bridge, Bridge.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :bridge, BridgeWeb.Endpoint,
+config :missionspace, MissionspaceWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
@@ -50,7 +50,7 @@ config :bridge, BridgeWeb.Endpoint,
 # different ports.
 
 # Enable dev routes for dashboard and mailbox
-config :bridge, dev_routes: true
+config :missionspace, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
@@ -66,10 +66,10 @@ config :phoenix, :plug_init_mode, :runtime
 config :swoosh, :api_client, false
 
 # Cloudflare R2 Storage (dev)
-config :bridge, :r2,
+config :missionspace, :r2,
   access_key_id: "1b5295b87cb00967b206561b746646a0",
   secret_access_key: "35d385323c21282ed01ea41603e851750455623310aa9cf59c6fedc39289916b",
-  bucket: "bridge",
+  bucket: "missionspace",
   host: "041b2d7bd4ad75659221d9d3edc332ac.r2.cloudflarestorage.com",
   region: "auto"
 

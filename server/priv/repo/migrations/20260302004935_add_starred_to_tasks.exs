@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddStarredToTasks do
+defmodule Missionspace.Repo.Migrations.AddStarredToTasks do
   use Ecto.Migration
 
   def change do

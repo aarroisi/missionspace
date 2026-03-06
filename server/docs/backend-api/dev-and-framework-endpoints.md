@@ -4,7 +4,7 @@ These are backend endpoints exposed by Phoenix runtime but not part of the core 
 
 ## Dev-only endpoints (`:dev_routes`)
 
-When `Application.compile_env(:bridge, :dev_routes)` is enabled:
+When `Application.compile_env(:missionspace, :dev_routes)` is enabled:
 
 | Method | Path | Purpose |
 | --- | --- | --- |

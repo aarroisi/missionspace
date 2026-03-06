@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.ChangeSubtaskStatusToIsCompleted do
+defmodule Missionspace.Repo.Migrations.ChangeSubtaskStatusToIsCompleted do
   use Ecto.Migration
 
   def change do

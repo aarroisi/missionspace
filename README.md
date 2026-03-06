@@ -1,6 +1,6 @@
-# Bridge - Team Collaboration App
+# Missionspace - Team Collaboration App
 
-Bridge is a modern team collaboration app featuring Docs (rich text posts), Lists (task management), and Chat (channels/DMs). Built as a Progressive Web App with Phoenix (Elixir) backend and React frontend.
+Missionspace is a modern team collaboration app featuring Docs (rich text posts), Lists (task management), and Chat (channels/DMs). Built as a Progressive Web App with Phoenix (Elixir) backend and React frontend.
 
 ## Features
 
@@ -35,16 +35,16 @@ Bridge is a modern team collaboration app featuring Docs (rich text posts), List
 ## Project Structure
 
 ```
-bridge/
+missionspace/
 ├── server/              # Phoenix backend
 │   ├── lib/
-│   │   ├── bridge/              # Business logic contexts
+│   │   ├── missionspace/              # Business logic contexts
 │   │   │   ├── accounts/        # User management
 │   │   │   ├── projects/        # Project schemas
 │   │   │   ├── lists/           # List, Task, Subtask schemas
 │   │   │   ├── docs/            # Document schemas
 │   │   │   └── chat/            # Channel, DM, Message schemas
-│   │   └── bridge_web/          # Web layer
+│   │   └── missionspace_web/          # Web layer
 │   │       ├── controllers/     # JSON API controllers
 │   │       ├── channels/        # WebSocket channels
 │   │       └── endpoint.ex      # HTTP endpoint
@@ -335,17 +335,17 @@ All real-time features use Phoenix Channels for efficient bidirectional communic
 cd server
 
 # Set environment variables
-export DATABASE_URL="postgres://user:pass@host/bridge_prod"
+export DATABASE_URL="postgres://user:pass@host/missionspace_prod"
 export SECRET_KEY_BASE="$(mix phx.gen.secret)"
 
 # Build release
 MIX_ENV=prod mix release
 
 # Run migrations
-_build/prod/rel/bridge/bin/bridge eval "Bridge.Release.migrate"
+_build/prod/rel/missionspace/bin/missionspace eval "Missionspace.Release.migrate"
 
 # Start server
-_build/prod/rel/bridge/bin/bridge start
+_build/prod/rel/missionspace/bin/missionspace start
 ```
 
 ### Frontend (Production)
@@ -386,7 +386,7 @@ MIT License - see LICENSE file for details
 
 For issues and questions:
 
-- GitHub Issues: https://github.com/yourusername/bridge/issues
+- GitHub Issues: https://github.com/yourusername/missionspace/issues
 - Documentation: See .codex/PRD.md and .codex/AGENTS.md
 
 ---

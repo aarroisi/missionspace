@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateReadPositions do
+defmodule Missionspace.Repo.Migrations.CreateReadPositions do
   use Ecto.Migration
 
   def change do

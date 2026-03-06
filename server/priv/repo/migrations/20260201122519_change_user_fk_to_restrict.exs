@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.ChangeUserFkToRestrict do
+defmodule Missionspace.Repo.Migrations.ChangeUserFkToRestrict do
   use Ecto.Migration
 
   def up do

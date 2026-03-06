@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.SetDoneStatusIsDone do
+defmodule Missionspace.Repo.Migrations.SetDoneStatusIsDone do
   use Ecto.Migration
 
   def up do

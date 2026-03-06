@@ -1,18 +1,18 @@
 ---
 name: backend
-description: Elixir/Phoenix backend development patterns for Bridge. Use when working on controllers, contexts, schemas, or API endpoints.
+description: Elixir/Phoenix backend development patterns for Missionspace. Use when working on controllers, contexts, schemas, or API endpoints.
 user-invocable: false
 ---
 
-# Bridge Backend Development
+# Missionspace Backend Development
 
 ## Context
 
 When working on backend code, you're in the `server/` directory working with:
 
-- **Controllers** (`lib/bridge_web/controllers/`) - Handle HTTP requests
-- **Contexts** (`lib/bridge/`) - Business logic modules
-- **Schemas** (`lib/bridge/*/schema.ex`) - Database models
+- **Controllers** (`lib/missionspace_web/controllers/`) - Handle HTTP requests
+- **Contexts** (`lib/missionspace/`) - Business logic modules
+- **Schemas** (`lib/missionspace/*/schema.ex`) - Database models
 - **Tests** (`test/`) - Controller and context tests
 
 ## Development Principle: Test-Driven Development (TDD)
@@ -112,10 +112,10 @@ end
 
 ## File Locations
 
-- **Controllers**: `lib/bridge_web/controllers/`
-- **Context modules**: `lib/bridge/`
+- **Controllers**: `lib/missionspace_web/controllers/`
+- **Context modules**: `lib/missionspace/`
 - **Schemas**: Inside context directories
-- **Tests**: `test/bridge_web/controllers/` and `test/bridge/`
+- **Tests**: `test/missionspace_web/controllers/` and `test/missionspace/`
 - **Migrations**: `priv/repo/migrations/`
 
 ## Running Backend

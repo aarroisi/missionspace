@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateUserStarsTable do
+defmodule Missionspace.Repo.Migrations.CreateUserStarsTable do
   use Ecto.Migration
 
   def change do

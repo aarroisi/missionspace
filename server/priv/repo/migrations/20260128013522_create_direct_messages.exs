@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateDirectMessages do
+defmodule Missionspace.Repo.Migrations.CreateDirectMessages do
   use Ecto.Migration
 
   def change do

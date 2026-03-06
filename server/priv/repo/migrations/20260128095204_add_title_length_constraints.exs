@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddTitleLengthConstraints do
+defmodule Missionspace.Repo.Migrations.AddTitleLengthConstraints do
   use Ecto.Migration
 
   def change do

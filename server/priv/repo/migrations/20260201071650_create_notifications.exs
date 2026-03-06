@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.CreateNotifications do
+defmodule Missionspace.Repo.Migrations.CreateNotifications do
   use Ecto.Migration
 
   def change do

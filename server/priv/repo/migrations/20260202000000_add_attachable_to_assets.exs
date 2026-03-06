@@ -1,4 +1,4 @@
-defmodule Bridge.Repo.Migrations.AddAttachableToAssets do
+defmodule Missionspace.Repo.Migrations.AddAttachableToAssets do
   use Ecto.Migration
 
   def change do

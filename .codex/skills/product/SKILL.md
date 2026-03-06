@@ -1,14 +1,14 @@
 ---
 name: product
-description: Product specification and business rules for Bridge. Reference this when implementing features that involve business logic, data ownership, user management, or permissions.
+description: Product specification and business rules for Missionspace. Reference this when implementing features that involve business logic, data ownership, user management, or permissions.
 user-invocable: false
 ---
 
-# Bridge Product Specification
+# Missionspace Product Specification
 
 ## Overview
 
-Bridge is a team collaboration platform for workspaces. Each workspace is an isolated environment containing projects, boards, docs, channels, and members.
+Missionspace is a team collaboration platform for workspaces. Each workspace is an isolated environment containing projects, boards, docs, channels, and members.
 
 ---
 
