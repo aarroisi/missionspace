@@ -68,14 +68,36 @@ class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-    this.token = localStorage.getItem("auth_token");
+  private normalizeToken(token: string | null | undefined): string | null {
+    if (!token) return null;
+
+    const normalized = token.trim();
+    if (!normalized || normalized === "undefined" || normalized === "null") {
+      return null;
+    }
+
+    return normalized;
   }
 
-  setToken(token: string) {
-    this.token = token;
-    localStorage.setItem("auth_token", token);
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+    this.token = this.normalizeToken(localStorage.getItem("auth_token"));
+
+    if (!this.token) {
+      localStorage.removeItem("auth_token");
+    }
+  }
+
+  setToken(token: string | null | undefined) {
+    const normalized = this.normalizeToken(token);
+
+    if (!normalized) {
+      this.clearToken();
+      return;
+    }
+
+    this.token = normalized;
+    localStorage.setItem("auth_token", normalized);
   }
 
   clearToken() {

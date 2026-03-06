@@ -7,6 +7,7 @@ defmodule Bridge.Accounts do
   alias Bridge.Repo
 
   alias Bridge.Accounts.{User, Workspace}
+  alias Bridge.ApiKeys
 
   @doc """
   Returns the list of users.
@@ -117,13 +118,16 @@ defmodule Bridge.Accounts do
     changeset = User.changeset(user, attrs)
     new_role = Ecto.Changeset.get_change(changeset, :role)
 
-    if user.role == "owner" and new_role in ["member", "guest"] do
-      # Demotion: force all private items to shared
+    if is_binary(new_role) do
       Repo.transaction(fn ->
         case Repo.update(changeset) do
           {:ok, updated_user} ->
-            force_private_items_to_shared(user.id)
-            updated_user
+            maybe_force_private_items_to_shared(user, new_role)
+
+            case ApiKeys.reconcile_scopes_for_user_role(updated_user.id, updated_user.role) do
+              {:ok, _updated_count} -> updated_user
+              {:error, reason} -> Repo.rollback(reason)
+            end
 
           {:error, changeset} ->
             Repo.rollback(changeset)
@@ -133,6 +137,13 @@ defmodule Bridge.Accounts do
       Repo.update(changeset)
     end
   end
+
+  defp maybe_force_private_items_to_shared(%User{role: "owner", id: user_id}, new_role)
+       when new_role in ["member", "guest"] do
+    force_private_items_to_shared(user_id)
+  end
+
+  defp maybe_force_private_items_to_shared(_user, _new_role), do: :ok
 
   defp force_private_items_to_shared(user_id) do
     import Ecto.Query
@@ -182,6 +193,9 @@ defmodule Bridge.Accounts do
 
       # Remove subscriptions
       Bridge.Subscriptions.delete_all_for_user(user.id)
+
+      # Remove API keys
+      ApiKeys.delete_all_for_user(user.id)
 
       # Scrub email and soft-delete user
       scrubbed_email = "deleted_#{user.id}@deleted.local"

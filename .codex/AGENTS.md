@@ -29,6 +29,7 @@ cd server && mix test           cd web && npx playwright test
    - Document: what it does, how it works, key decisions, entity relationships, and UI behavior
    - Update the spec as the feature evolves — changes are tracked in git alongside the code
    - This makes it easy to generate product docs later
+9. **Destructive Actions Need Confirmation**: Any destructive UI action (delete, revoke, remove, disconnect, etc.) must use the shared `ConfirmModal` pattern before executing.
 
 ## Documentation
 

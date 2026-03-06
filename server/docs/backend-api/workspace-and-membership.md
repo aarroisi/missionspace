@@ -82,6 +82,10 @@
 
 - Auth + authorization: owner only
 - Request body: top-level fields accepted by user changeset (`name`, `email`, `avatar`, `timezone`, `role`, `online`, `is_active`, etc.)
+- Role change behavior:
+  - Existing API keys under that user are automatically adjusted.
+  - Any scopes no longer allowed by the new role are removed.
+  - Scopes still allowed by the new role are preserved.
 - Response `200`: `{"data": WorkspaceMember}`
 - Errors: `403`, `404`, `422`
 
@@ -92,6 +96,7 @@
   - Soft-deletes user (`is_active=false`, `deleted_at` set)
   - Scrubs email (`deleted_<id>@deleted.local`)
   - Removes project memberships, item memberships, notifications, subscriptions
+  - Removes all API keys for the deleted user
 - Response `204` empty body
 - Errors: `403`, `404`
 

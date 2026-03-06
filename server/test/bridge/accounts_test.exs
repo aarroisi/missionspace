@@ -3,6 +3,7 @@ defmodule Bridge.AccountsTest do
 
   alias Bridge.Accounts
   alias Bridge.Accounts.User
+  alias Bridge.ApiKeys
   alias Bridge.Projects
   alias Bridge.Notifications
 
@@ -132,6 +133,15 @@ defmodule Bridge.AccountsTest do
 
       refute Projects.is_item_member?("channel", channel.id, user.id)
     end
+
+    test "removes API keys and invalidates them", %{user: user} do
+      {:ok, %{plaintext_key: plaintext_key}} =
+        ApiKeys.create_api_key_for_user(user, %{"name" => "Automation"})
+
+      assert {:ok, _deleted_user} = Accounts.delete_user(user)
+
+      assert {:error, :invalid_api_key} = ApiKeys.authenticate_api_key(plaintext_key)
+    end
   end
 
   describe "update_user/2 demotion side-effects" do
@@ -216,6 +226,19 @@ defmodule Bridge.AccountsTest do
       assert updated_user.name == "New Name"
       assert updated_user.role == "owner"
       assert Bridge.Repo.get!(Bridge.Lists.List, private_list.id).visibility == "private"
+    end
+
+    test "role changes reconcile API key scopes", %{owner: owner} do
+      {:ok, %{api_key: api_key}} =
+        ApiKeys.create_api_key_for_user(owner, %{"name" => "Owner key"})
+
+      {:ok, _updated_user} = Accounts.update_user(owner, %{role: "member"})
+
+      reloaded_key = Bridge.Repo.get!(Bridge.ApiKeys.ApiKey, api_key.id)
+
+      assert reloaded_key.scopes == Bridge.Authorization.Scopes.role_scopes("member")
+      refute "project:manage" in reloaded_key.scopes
+      refute "workspace:members:manage" in reloaded_key.scopes
     end
   end
 

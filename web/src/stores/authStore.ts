@@ -100,7 +100,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const data = await api.post<{
         user: User;
         workspace: Workspace;
-        token: string;
+        token?: string;
       }>("/auth/login", {
         email,
         password,

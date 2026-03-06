@@ -14,6 +14,11 @@
 | POST | `/api/auth/forgot-password` | No | Starts password reset flow |
 | POST | `/api/auth/reset-password` | No | Resets password by token |
 | POST | `/api/auth/resend-verification` | Yes | Resends verification email |
+| GET | `/api/api-keys` | Yes | Lists API keys for current user |
+| GET | `/api/api-keys/scopes` | Yes | Returns available scopes for current user's role |
+| POST | `/api/api-keys` | Yes | Creates API key for current user |
+| DELETE | `/api/api-keys/:id` | Yes | Revokes API key owned by current user |
+| GET | `/api/api-keys/verify` | API key | Verifies provided API key and returns key/user summary |
 
 ## GET `/health`
 
@@ -195,3 +200,99 @@
   - `200` `{"message":"Email already verified"}`
   - `200` `{"message":"Verification email sent"}`
   - `500` `{"error":"Failed to send verification email"}`
+
+## API key endpoints
+
+API keys are attached to users (not directly to workspaces). Workspace context is derived from the attached user.
+
+### GET `/api/api-keys`
+
+- Auth: required (session or API key)
+- Returns active (non-revoked) API keys owned by current user.
+- Response `200`: `{"data":[ApiKey...]}`
+
+### GET `/api/api-keys/scopes`
+
+- Auth: required
+- Returns role-allowed scopes for current user.
+- Response `200`:
+
+```json
+{
+  "data": {
+    "scopes": ["item:view", "item:create"]
+  }
+}
+```
+
+### POST `/api/api-keys`
+
+- Auth: required
+- Request body (top-level):
+
+```json
+{
+  "name": "CI Integration",
+  "scopes": ["item:view", "item:create"]
+}
+```
+
+- Notes:
+  - `name` is required.
+  - `scopes` is optional; when omitted, backend defaults to all scopes allowed by current role.
+  - Requested scopes must be a subset of role scopes.
+  - Plaintext key is returned **once** in this response only.
+- Response `201`:
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "name": "CI Integration",
+    "key_prefix": "brk_xxxxxxxx",
+    "scopes": ["item:view", "item:create"],
+    "key": "brk_very_long_secret",
+    "verify_endpoint": "/api/api-keys/verify"
+  }
+}
+```
+
+- Errors:
+  - `422` validation errors
+  - `422` invalid/unauthorized scopes
+
+### DELETE `/api/api-keys/:id`
+
+- Auth: required
+- Revokes key if owned by current user.
+- Response `204` empty body
+- Errors: `404` if key not found or not owned by user
+
+### GET `/api/api-keys/verify`
+
+- Auth: API key only
+- Provide key via:
+  - `X-API-Key: brk_...`, or
+  - `Authorization: Bearer brk_...`
+- Behavior:
+  - Returns `401` when key is invalid/revoked.
+  - Returns `200` with key + user + effective scopes when valid.
+- Response `200`:
+
+```json
+{
+  "data": {
+    "valid": true,
+    "auth_method": "api_key",
+    "api_key": "ApiKey",
+    "user": {
+      "id": "uuid",
+      "name": "string",
+      "email": "string",
+      "role": "owner|member|guest",
+      "workspace_id": "uuid"
+    },
+    "scopes": ["item:view", "item:create"]
+  }
+}
+```

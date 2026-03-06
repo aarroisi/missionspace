@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
@@ -6,6 +6,7 @@ import { useToastStore } from "@/stores/toastStore";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { getAssetUrl } from "@/lib/asset-cache";
 import { Modal } from "@/components/ui/Modal";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -78,9 +79,7 @@ function getTimezoneOffsetLabel(timezone: string): string | null {
 
     return offsetRemainderMinutes === 0
       ? `GMT${sign}${offsetHours}`
-      : `GMT${sign}${offsetHours}:${offsetRemainderMinutes
-          .toString()
-          .padStart(2, "0")}`;
+      : `GMT${sign}${offsetHours}:${offsetRemainderMinutes.toString().padStart(2, "0")}`;
   } catch {
     return null;
   }
@@ -93,6 +92,7 @@ function formatTimezoneLabel(timezone: string): string {
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { user, updateProfile, logout } = useAuthStore();
   const { success, error: showError } = useToastStore();
   const [name, setName] = useState("");
@@ -130,7 +130,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     }
   }, [isOpen, user]);
 
-  // Resolve avatar asset ID to presigned URL
   useEffect(() => {
     if (avatarAssetId) {
       getAssetUrl(avatarAssetId).then(setAvatarDisplayUrl).catch(() => setAvatarDisplayUrl(null));
@@ -163,8 +162,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       success("Profile updated successfully");
       onClose();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to update profile";
+      const message = err instanceof Error ? err.message : "Failed to update profile";
       setError(message);
       showError(message);
     } finally {
@@ -174,7 +172,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   const handleAvatarUpload = (asset: { id: string; url: string }) => {
     setAvatarAssetId(asset.id);
-    // Set display URL immediately from the upload response
     if (asset.url) setAvatarDisplayUrl(asset.url);
   };
 
@@ -192,7 +189,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   return (
     <Modal title="Edit Profile" onClose={onClose} size="md">
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 p-4">
         <div className="flex justify-center">
           <AvatarUpload
             name={name || user.name}
@@ -210,10 +207,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         </div>
 
         <div>
-          <label
-            htmlFor="profile-name"
-            className="block text-sm font-medium text-dark-text mb-1"
-          >
+          <label htmlFor="profile-name" className="mb-1 block text-sm font-medium text-dark-text">
             Name
           </label>
           <input
@@ -221,17 +215,14 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-dark-text placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-dark-text placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Your name"
             required
           />
         </div>
 
         <div>
-          <label
-            htmlFor="profile-email"
-            className="block text-sm font-medium text-dark-text mb-1"
-          >
+          <label htmlFor="profile-email" className="mb-1 block text-sm font-medium text-dark-text">
             Email
           </label>
           <input
@@ -239,7 +230,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-dark-text placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-dark-text placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="your@email.com"
             required
           />
@@ -248,7 +239,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         <div>
           <label
             htmlFor="profile-timezone"
-            className="block text-sm font-medium text-dark-text mb-1"
+            className="mb-1 block text-sm font-medium text-dark-text"
           >
             Time zone
           </label>
@@ -256,12 +247,10 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             id="profile-timezone"
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
-            className={`w-full px-3 py-2 pr-10 bg-dark-bg border border-dark-border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${SELECT_CHEVRON_CLASS}`}
+            className={`w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 pr-10 text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${SELECT_CHEVRON_CLASS}`}
           >
             <option value="">Not set</option>
-            {hasCustomTimezoneOption && (
-              <option value={timezone}>{formatTimezoneLabel(timezone)}</option>
-            )}
+            {hasCustomTimezoneOption && <option value={timezone}>{formatTimezoneLabel(timezone)}</option>}
             {timezoneOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -272,32 +261,34 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
-        <div className="flex gap-3 justify-end pt-2">
+        <div className="flex justify-end gap-3 pt-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-dark-bg hover:bg-dark-border text-dark-text transition-colors"
+            className="rounded-lg bg-dark-bg px-4 py-2 text-dark-text transition-colors hover:bg-dark-border"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!hasChanges || isLoading}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? "Saving..." : "Save Changes"}
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={isLoading}
-          className="w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          <LogOut size={16} />
-          <span>Sign Out</span>
-        </button>
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
+        )}
       </form>
     </Modal>
   );

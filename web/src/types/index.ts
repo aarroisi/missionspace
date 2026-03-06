@@ -15,6 +15,36 @@ export interface User {
   updatedAt: string;
 }
 
+export interface ApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scopes: string[];
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
+  insertedAt: string;
+  updatedAt: string;
+}
+
+export interface CreatedApiKey extends ApiKey {
+  key: string;
+  verifyEndpoint: string;
+}
+
+export interface ApiKeyVerifyResponse {
+  valid: boolean;
+  authMethod: string;
+  apiKey: ApiKey;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    workspaceId: string;
+  };
+  scopes: string[];
+}
+
 // Project member type
 export interface ProjectMember {
   id: string;

@@ -10,6 +10,7 @@ defmodule Bridge.Authorization.Policy do
   """
 
   alias Bridge.Accounts.User
+  alias Bridge.Authorization.Scopes
   alias Bridge.Projects
 
   @doc """
@@ -18,69 +19,79 @@ defmodule Bridge.Authorization.Policy do
   """
   def can?(user, action, resource \\ nil)
 
+  def can?(%User{} = user, action, resource) do
+    if Scopes.has_scope_for_action?(user, action) do
+      do_can?(user, action, resource)
+    else
+      false
+    end
+  end
+
+  def can?(_user, _action, _resource), do: false
+
   # --- Workspace management: owner only ---
-  def can?(%User{role: "owner"}, :manage_workspace_members, _), do: true
-  def can?(_user, :manage_workspace_members, _), do: false
+  defp do_can?(%User{role: "owner"}, :manage_workspace_members, _), do: true
+  defp do_can?(_user, :manage_workspace_members, _), do: false
 
   # --- Project member management: owner only ---
-  def can?(%User{role: "owner"}, :manage_project_members, _), do: true
-  def can?(_user, :manage_project_members, _), do: false
+  defp do_can?(%User{role: "owner"}, :manage_project_members, _), do: true
+  defp do_can?(_user, :manage_project_members, _), do: false
 
   # --- Project management (create/update/delete projects): owner only ---
-  def can?(%User{role: "owner"}, :manage_projects, _), do: true
-  def can?(_user, :manage_projects, _), do: false
+  defp do_can?(%User{role: "owner"}, :manage_projects, _), do: true
+  defp do_can?(_user, :manage_projects, _), do: false
 
   # --- Item member management: owner or item creator (if shared) ---
-  def can?(%User{role: "owner"}, :manage_item_members, _), do: true
+  defp do_can?(%User{role: "owner"}, :manage_item_members, _), do: true
 
-  def can?(user, :manage_item_members, item) do
+  defp do_can?(user, :manage_item_members, item) do
     is_creator?(user, item) and get_visibility(item) == "shared"
   end
 
   # --- Visibility management: only owner can set private ---
-  def can?(%User{role: "owner"}, :set_visibility, _), do: true
-  def can?(_user, :set_visibility, "shared"), do: true
-  def can?(_user, :set_visibility, _), do: false
+  defp do_can?(%User{role: "owner"}, :set_visibility, _), do: true
+  defp do_can?(_user, :set_visibility, "shared"), do: true
+  defp do_can?(_user, :set_visibility, _), do: false
 
   # --- View project ---
-  def can?(%User{role: "owner"}, :view_project, _project), do: true
+  defp do_can?(%User{role: "owner"}, :view_project, _project), do: true
 
-  def can?(user, :view_project, project) do
+  defp do_can?(user, :view_project, project) do
     is_project_member?(user, project.id)
   end
 
   # --- View item ---
-  def can?(user, :view_item, item) do
+  defp do_can?(user, :view_item, item) do
     can_access_item?(user, item)
   end
 
   # --- Create item ---
   # Create without project (workspace-level): allowed for all roles
-  def can?(_user, :create_item, nil), do: true
+  defp do_can?(_user, :create_item, nil), do: true
   # Create in project: owner always, others need membership
-  def can?(%User{role: "owner"}, :create_item, _project_id), do: true
+  defp do_can?(%User{role: "owner"}, :create_item, _project_id), do: true
 
-  def can?(user, :create_item, project_id) when is_binary(project_id) do
+  defp do_can?(user, :create_item, project_id) when is_binary(project_id) do
     is_project_member?(user, project_id)
   end
 
   # --- Update item ---
-  def can?(user, :update_item, item) do
+  defp do_can?(user, :update_item, item) do
     can_mutate_item?(user, item)
   end
 
   # --- Delete item ---
-  def can?(user, :delete_item, item) do
+  defp do_can?(user, :delete_item, item) do
     can_mutate_item?(user, item)
   end
 
   # --- Comment: can view = can comment ---
-  def can?(user, :comment, item) do
+  defp do_can?(user, :comment, item) do
     can_access_item?(user, item)
   end
 
   # Default deny
-  def can?(_user, _action, _resource), do: false
+  defp do_can?(_user, _action, _resource), do: false
 
   # ============================================================
   # Private helpers

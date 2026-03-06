@@ -477,4 +477,26 @@ defmodule Bridge.Authorization.PolicyTest do
       assert Policy.can?(owner, :create_item, any_project.id)
     end
   end
+
+  describe "scope gating" do
+    setup do
+      workspace = insert(:workspace)
+      owner = insert(:user, workspace_id: workspace.id, role: "owner")
+      project = insert(:project, workspace_id: workspace.id)
+
+      {:ok, owner: owner, project: project}
+    end
+
+    test "denies action when required scope is missing", %{owner: owner} do
+      owner_without_manage_scope = %{owner | scopes: ["item:view"]}
+
+      refute Policy.can?(owner_without_manage_scope, :manage_projects, nil)
+    end
+
+    test "allows action when required scope is present", %{owner: owner, project: project} do
+      owner_with_project_view = %{owner | scopes: ["project:view"]}
+
+      assert Policy.can?(owner_with_project_view, :view_project, project)
+    end
+  end
 end

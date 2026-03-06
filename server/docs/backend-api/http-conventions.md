@@ -4,7 +4,9 @@
 
 - Primary API namespace: `/api`
 - JSON request/response format throughout (`accepts ["json"]` pipeline)
-- Session-backed authentication (cookie), not bearer tokens
+- Authentication supports both:
+  - Session cookie (`_bridge_key`)
+  - User API keys (`brk_...`) via header
 
 ## Authentication model
 
@@ -16,23 +18,50 @@
 - Session is cleared by:
   - `POST /api/auth/logout`
 
+### API key model
+
+- API key header options:
+  - `X-API-Key: brk_...`
+  - `Authorization: Bearer brk_...`
+- API keys are attached to users, not directly to workspaces.
+- Workspace context is resolved from the attached user.
+- Only bearer tokens prefixed with `brk_` are treated as API keys.
+- Any other bearer token is ignored by auth plug and session auth is used.
+
 ### Protected route behavior (`AuthPlug`)
 
 For authenticated `/api` routes:
 
-- Missing/invalid session -> `401`
+- Missing/invalid session/API key -> `401`
 - Inactive user (`is_active=false`) -> `401` with `{"error":"Account has been deactivated"}`
 - Unverified email -> `403` with `{"error":"email_not_verified"}`
   - Exception: `POST /api/auth/resend-verification` is allowed for unverified users
 - Missing workspace on user -> `403`
 
-## Authorization model (role + resource)
+When API key auth succeeds:
+
+- `conn.assigns.auth_method = :api_key`
+- `conn.assigns.current_api_key` is available
+- User scopes are set to `api_key.scopes ∩ role_scopes(user.role)`
+
+When session auth succeeds:
+
+- `conn.assigns.auth_method = :session`
+- User scopes are set from role defaults
+
+## Authorization model (scope + role + resource)
 
 Roles:
 
 - `owner`
 - `member`
 - `guest`
+
+Scopes are attached to roles and can be narrowed per API key.
+
+- Non-API-key requests use role scopes directly.
+- API key requests use intersection of key scopes and role scopes.
+- Policy checks first validate required scope, then run resource-level checks.
 
 High-level rules:
 
@@ -42,6 +71,7 @@ High-level rules:
 - Guests are limited to one project-or-item membership total.
 
 See `lib/bridge/authorization/policy.ex` for exact behavior.
+Scope catalog lives in `lib/bridge/authorization/scopes.ex`.
 
 ## Pagination
 
@@ -122,3 +152,23 @@ Do not normalize keys in clients unless the endpoint contract is explicitly chan
 - Item-member item types: `list`, `doc_folder`, `channel`
 - Project-item item types (API): `board`, `doc_folder`, `channel`
 - Project-item item types (DB): `list`, `doc_folder`, `channel`
+
+## API key scopes
+
+Current scope catalog:
+
+- `workspace:members:manage`
+- `project:members:manage`
+- `project:manage`
+- `project:view`
+- `item:view`
+- `item:create`
+- `item:update`
+- `item:delete`
+- `item:comment`
+- `item:members:manage`
+- `item:visibility:set`
+- `message:view`
+- `message:create`
+- `message:update`
+- `message:delete`

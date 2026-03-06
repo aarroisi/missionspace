@@ -4,6 +4,7 @@ defmodule BridgeWeb.MessageController do
   alias Bridge.Chat
   alias Bridge.Mentions
   alias Bridge.Authorization.Policy
+  alias Bridge.Authorization.Scopes
   import Plug.Conn
 
   action_fallback(BridgeWeb.FallbackController)
@@ -29,6 +30,8 @@ defmodule BridgeWeb.MessageController do
 
   defp authorize(conn, permission) do
     user = conn.assigns.current_user
+
+    scope_allowed = Scopes.has_scope_for_action?(user, permission)
 
     allowed =
       case permission do
@@ -67,7 +70,7 @@ defmodule BridgeWeb.MessageController do
           conn.assigns.message.user_id == user.id or user.role == "owner"
       end
 
-    if allowed do
+    if scope_allowed and allowed do
       conn
     else
       conn

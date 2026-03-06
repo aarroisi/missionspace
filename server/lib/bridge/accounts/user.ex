@@ -14,6 +14,7 @@ defmodule Bridge.Accounts.User do
     field(:password_hash, :string)
     field(:password, :string, virtual: true)
     field(:role, :string, default: "owner")
+    field(:scopes, {:array, :string}, virtual: true)
     field(:is_active, :boolean, default: true)
     field(:deleted_at, :utc_datetime_usec)
     field(:email_verified_at, :utc_datetime_usec)
@@ -24,6 +25,7 @@ defmodule Bridge.Accounts.User do
     belongs_to(:workspace, Bridge.Accounts.Workspace)
     has_many(:project_members, Bridge.Projects.ProjectMember)
     has_many(:projects, through: [:project_members, :project])
+    has_many(:api_keys, Bridge.ApiKeys.ApiKey)
 
     timestamps()
   end

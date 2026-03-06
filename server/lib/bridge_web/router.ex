@@ -35,6 +35,11 @@ defmodule BridgeWeb.Router do
     put("/auth/me", AuthController, :update_me)
     post("/auth/resend-verification", AuthController, :resend_verification)
 
+    # API keys (user scoped)
+    get("/api-keys/verify", ApiKeyController, :verify)
+    get("/api-keys/scopes", ApiKeyController, :scopes)
+    resources("/api-keys", ApiKeyController, only: [:index, :create, :delete])
+
     # Workspace settings (owner only)
     put("/workspace", WorkspaceController, :update)
 

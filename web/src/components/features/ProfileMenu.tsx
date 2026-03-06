@@ -1,15 +1,24 @@
 import { useState } from "react";
-import { User } from "lucide-react";
+import { Code2, LogOut, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { Avatar } from "@/components/ui/Avatar";
-import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
+import { Dropdown, DropdownDivider, DropdownItem } from "@/components/ui/Dropdown";
+import { DevelopersModal } from "./DevelopersModal";
 import { ProfileModal } from "./ProfileModal";
 
 export function ProfileMenu() {
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isDevelopersModalOpen, setIsDevelopersModalOpen] = useState(false);
 
   if (!user) return null;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   return (
     <>
@@ -46,12 +55,29 @@ export function ProfileMenu() {
               <span>Edit Profile</span>
             </div>
           </DropdownItem>
+          <DropdownItem onClick={() => setIsDevelopersModalOpen(true)}>
+            <div className="flex items-center gap-2">
+              <Code2 size={16} />
+              <span>Developers</span>
+            </div>
+          </DropdownItem>
+          <DropdownDivider />
+          <DropdownItem onClick={() => void handleLogout()} variant="danger">
+            <div className="flex items-center gap-2">
+              <LogOut size={16} />
+              <span>Log out</span>
+            </div>
+          </DropdownItem>
         </div>
       </Dropdown>
 
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+      />
+      <DevelopersModal
+        isOpen={isDevelopersModalOpen}
+        onClose={() => setIsDevelopersModalOpen(false)}
       />
     </>
   );

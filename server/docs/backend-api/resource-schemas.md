@@ -29,6 +29,39 @@ This page defines the core response objects reused across endpoints.
 }
 ```
 
+### `ApiKey`
+
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "key_prefix": "brk_xxxxxxxx",
+  "scopes": ["item:view", "item:create"],
+  "last_used_at": "datetime|null",
+  "revoked_at": "datetime|null",
+  "inserted_at": "datetime",
+  "updated_at": "datetime"
+}
+```
+
+### `ApiKeyVerifyResponse`
+
+```json
+{
+  "valid": true,
+  "auth_method": "api_key",
+  "api_key": "ApiKey",
+  "user": {
+    "id": "uuid",
+    "name": "string",
+    "email": "string",
+    "role": "owner|member|guest",
+    "workspace_id": "uuid"
+  },
+  "scopes": ["item:view", "item:create"]
+}
+```
+
 ## Common wrappers
 
 ### `ListResponse<T>`

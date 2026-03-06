@@ -72,6 +72,26 @@ When a workspace member is removed:
 
 **Database safeguard**: All foreign keys to users use `ON DELETE RESTRICT` to prevent accidental hard deletion.
 
+### API Keys
+
+- API keys are **personal credentials** attached to a user.
+- API keys are not standalone workspace credentials; workspace context is derived from the user.
+- API keys have explicit scopes.
+- Effective key scopes are capped by role permissions:
+  - `effective_scopes = api_key.scopes ∩ role_scopes(user.role)`
+- For normal non-API-key auth, scopes come from role defaults.
+
+#### Role changes
+
+When a user's role changes, all API keys under that user are reconciled immediately:
+
+1. Remove scopes no longer allowed by the new role.
+2. Keep scopes still allowed by the new role.
+
+#### Member deletion
+
+When a user is soft-deleted, all API keys for that user must be removed and become unusable immediately.
+
 ---
 
 ## Multi-tenancy

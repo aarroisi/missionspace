@@ -3,6 +3,7 @@ import {
   Home,
   Bell,
   Briefcase,
+  Code2,
   Kanban,
   MessageSquare,
   Menu,
@@ -17,6 +18,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useSearchStore } from "@/stores/searchStore";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { DevelopersModal } from "@/components/features/DevelopersModal";
 import { ProfileModal } from "@/components/features/ProfileModal";
 
 export function MobileTabBar() {
@@ -25,6 +27,7 @@ export function MobileTabBar() {
   const { user } = useAuthStore();
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showDevelopersModal, setShowDevelopersModal] = useState(false);
 
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const isOwner = user?.role === "owner";
@@ -103,6 +106,9 @@ export function MobileTabBar() {
       case "profile":
         setShowProfileModal(true);
         break;
+      case "developers":
+        setShowDevelopersModal(true);
+        break;
       case "refresh":
         window.location.reload();
         break;
@@ -174,6 +180,14 @@ export function MobileTabBar() {
             </button>
 
             <button
+              onClick={() => handleMoreAction("developers")}
+              className="flex flex-col items-center justify-center gap-1 py-3 rounded-lg text-dark-text-muted hover:bg-dark-border/50 transition-colors"
+            >
+              <Code2 size={20} />
+              <span className="text-[10px] leading-tight">Developers</span>
+            </button>
+
+            <button
               onClick={() => handleMoreAction("refresh")}
               className="flex flex-col items-center justify-center gap-1 py-3 rounded-lg text-dark-text-muted hover:bg-dark-border/50 transition-colors"
             >
@@ -217,6 +231,10 @@ export function MobileTabBar() {
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+      />
+      <DevelopersModal
+        isOpen={showDevelopersModal}
+        onClose={() => setShowDevelopersModal(false)}
       />
     </>
   );
