@@ -3,6 +3,7 @@ import { Quote, X } from "lucide-react";
 import { Message as MessageType } from "@/types";
 import { clsx } from "clsx";
 import { useAuthStore } from "@/stores/authStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { ContentRenderer } from "@/lib/milkdown/ContentRenderer";
 import {
   RichTextEditor,
@@ -14,7 +15,8 @@ import { Plugin, PluginKey } from "@milkdown/prose/state";
 const submitPluginKey = new PluginKey("submit-on-enter");
 
 /**
- * Creates a ProseMirror plugin that submits on Enter and inserts newline on Shift-Enter.
+ * Creates a ProseMirror plugin that submits on Cmd/Ctrl+Enter.
+ * Plain Enter is left to the editor so it inserts a newline.
  * Checks if mention popup is active before submitting.
  */
 function createSubmitPlugin(
@@ -25,17 +27,24 @@ function createSubmitPlugin(
     return new Plugin({
       key: submitPluginKey,
       props: {
-        handleKeyDown(_view, event) {
-          if (event.key === "Enter" && !event.shiftKey) {
-            // Don't submit if mention popup is active
+        handleDOMEvents: {
+          keydown(_view, event) {
+            if (event.key !== "Enter") {
+              return false;
+            }
+
             if (isMentionActiveRef.current) {
               return false;
             }
-            event.preventDefault();
-            onSubmitRef.current();
-            return true;
-          }
-          return false;
+
+            if (event.metaKey || event.ctrlKey) {
+              event.preventDefault();
+              onSubmitRef.current();
+              return true;
+            }
+
+            return false;
+          },
         },
       },
     });
@@ -77,6 +86,7 @@ export const CommentEditor = forwardRef<
     ref,
   ) => {
     const { members } = useAuthStore();
+    const isMobile = useIsMobile();
     const onSubmitRef = useRef(onSubmit);
     const isMentionActiveRef = useRef(false);
     const editorHandleRef = useRef<RichTextEditorHandle | null>(null);
@@ -144,13 +154,25 @@ export const CommentEditor = forwardRef<
       ? "hover:bg-dark-surface"
       : "hover:bg-dark-bg";
     const quoteBg = isThread ? "bg-dark-surface" : "bg-dark-bg";
+    const submitShortcut = useMemo(() => {
+      if (typeof navigator === "undefined") {
+        return "Ctrl+Enter";
+      }
+
+      return /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+        ? "Cmd+Enter"
+        : "Ctrl+Enter";
+    }, []);
+
+    const shortcutHint = `Enter for newline | ${submitShortcut} to send`;
 
     const sendButton = (
       <button
         onClick={onSubmit}
         disabled={!hasContent}
         className="p-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-        title="Send"
+        aria-label={isMobile ? "Send" : `Send (${submitShortcut})`}
+        title={isMobile ? "Send" : `Send (${submitShortcut})`}
         onMouseDown={(e) => e.preventDefault()}
       >
         <svg
@@ -219,6 +241,11 @@ export const CommentEditor = forwardRef<
             "[&_.milkdown_.editor]:pb-10",
           )}
         />
+        {!isMobile && (
+          <div className="pointer-events-none absolute bottom-2 left-3 right-14 z-10 truncate text-[11px] text-dark-text-muted">
+            {shortcutHint}
+          </div>
+        )}
         <div className="absolute bottom-2 right-2 z-10">
           {sendButton}
         </div>

@@ -20,6 +20,16 @@ test.describe("Kanban Board", () => {
       .locator("button")
       .click();
 
+    const nameInput = page.getByLabel(/name/i);
+    await nameInput.focus();
+    await page.keyboard.insertText("Test Board");
+
+    const createButton = page
+      .locator("form")
+      .getByRole("button", { name: /create board/i });
+    await expect(createButton).toBeEnabled({ timeout: 10000 });
+    await createButton.click();
+
     // Wait for the new board to be created and navigate to it
     await page.waitForURL(/\/boards\/[a-f0-9-]+/);
   }
@@ -263,6 +273,40 @@ test.describe("Kanban Board", () => {
     await expect(page.getByText("Subtask link copied to clipboard")).toBeVisible();
     const copiedSubtaskUrl = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedSubtaskUrl).toBe(expectedSubtaskUrl);
+  });
+
+  test("should submit task comments with keyboard shortcut and keep Enter for newlines", async ({
+    page,
+  }) => {
+    await createBoard(page);
+
+    await page
+      .getByTestId("column-todo")
+      .getByRole("button", { name: /add task/i })
+      .click();
+    await page.getByPlaceholder(/task title/i).focus();
+    await page.keyboard.insertText("Shortcut Comment Task");
+    await page.getByRole("button", { name: "Add Task", exact: true }).click();
+
+    await page.getByText("Shortcut Comment Task").click();
+    await expect(page).toHaveURL(/task=/);
+
+    const commentEditor = page.locator(".ProseMirror").last();
+    await commentEditor.click();
+    await page.keyboard.insertText("First line");
+    await page.keyboard.press("Enter");
+    await page.keyboard.insertText("Second line");
+    await page.waitForTimeout(300);
+
+    await expect(page.getByText(/^Comments \(1\)$/)).toHaveCount(0);
+    await expect(commentEditor).toContainText("First line");
+    await expect(commentEditor).toContainText("Second line");
+
+    await page.keyboard.press("Control+Enter");
+
+    await expect(page.getByText(/^Comments \(1\)$/)).toBeVisible();
+    await expect(page.getByText("First line")).toBeVisible();
+    await expect(page.getByText("Second line")).toBeVisible();
   });
 
   test("should change task status via detail modal dropdown", async ({

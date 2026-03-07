@@ -115,6 +115,50 @@ test.describe("Critical User Flows", () => {
     expect(dialogAppeared).toBe(false);
   });
 
+  test("should submit channel messages with keyboard shortcut and keep Enter for newlines", async ({
+    page,
+  }) => {
+    const channelName = "shortcut-channel";
+
+    await page.getByTitle("Channels").click();
+    await expect(page.getByText("All Channels")).toBeVisible();
+
+    await page
+      .locator("div")
+      .filter({ hasText: /^All Channels$/ })
+      .locator("button")
+      .click();
+
+    const channelNameInput = page.getByLabel(/name/i);
+    await channelNameInput.focus();
+    await page.keyboard.insertText(channelName);
+    await page
+      .locator("form")
+      .getByRole("button", { name: /create channel/i })
+      .click();
+    await page.waitForURL(/\/channels\/[a-f0-9-]+/);
+
+    const emptyStateTitle = page.getByText(`No messages in #${channelName} yet`);
+    await expect(emptyStateTitle).toBeVisible();
+
+    const commentEditor = page.locator(".ProseMirror").last();
+    await commentEditor.click();
+    await page.keyboard.insertText("First line");
+    await page.keyboard.press("Enter");
+    await page.keyboard.insertText("Second line");
+    await page.waitForTimeout(300);
+
+    await expect(emptyStateTitle).toBeVisible();
+    await expect(commentEditor).toContainText("First line");
+    await expect(commentEditor).toContainText("Second line");
+
+    await page.keyboard.press("Control+Enter");
+
+    await expect(emptyStateTitle).toHaveCount(0);
+    await expect(page.getByText("First line")).toBeVisible();
+    await expect(page.getByText("Second line")).toBeVisible();
+  });
+
   test("should successfully edit and save a document", async ({ page }) => {
     // Create a doc
     await page.goto("/docs/new");
