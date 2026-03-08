@@ -7,18 +7,21 @@ defmodule Missionspace.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      MissionspaceWeb.Telemetry,
-      Missionspace.Repo,
-      {DNSCluster, query: Application.get_env(:missionspace, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Missionspace.PubSub},
-      # Start presence tracking
-      MissionspaceWeb.Presence,
-      # Start a worker by calling: Missionspace.Worker.start_link(arg)
-      # {Missionspace.Worker, arg},
-      # Start to serve requests, typically the last entry
-      MissionspaceWeb.Endpoint
-    ]
+    children =
+      [
+        MissionspaceWeb.Telemetry,
+        Missionspace.Repo,
+        {DNSCluster, query: Application.get_env(:missionspace, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: Missionspace.PubSub},
+        Missionspace.Jido,
+        {Oban, Application.fetch_env!(:missionspace, Oban)},
+        # Start presence tracking
+        MissionspaceWeb.Presence,
+        # Start a worker by calling: Missionspace.Worker.start_link(arg)
+        # {Missionspace.Worker, arg},
+        # Start to serve requests, typically the last entry
+        MissionspaceWeb.Endpoint
+      ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

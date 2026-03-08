@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Settings, Users, ChevronRight, ArrowLeft } from "lucide-react";
+import { Settings, Users, Bot, ChevronRight, ArrowLeft } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuthStore } from "@/stores/authStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -12,6 +12,7 @@ interface SettingsLayoutProps {
 
 const settingsNavItems = [
   { path: "/settings/general", label: "General", icon: Settings },
+  { path: "/settings/automation", label: "Automation", icon: Bot },
   { path: "/settings/members", label: "Members", icon: Users },
 ];
 

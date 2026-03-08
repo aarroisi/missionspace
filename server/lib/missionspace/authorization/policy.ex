@@ -33,6 +33,9 @@ defmodule Missionspace.Authorization.Policy do
   defp do_can?(%User{role: "owner"}, :manage_workspace_members, _), do: true
   defp do_can?(_user, :manage_workspace_members, _), do: false
 
+  defp do_can?(%User{role: "owner"}, :manage_workspace_automation, _), do: true
+  defp do_can?(_user, :manage_workspace_automation, _), do: false
+
   # --- Project member management: owner only ---
   defp do_can?(%User{role: "owner"}, :manage_project_members, _), do: true
   defp do_can?(_user, :manage_project_members, _), do: false

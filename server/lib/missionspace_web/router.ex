@@ -48,6 +48,62 @@ defmodule MissionspaceWeb.Router do
 
     # Workspace settings (owner only)
     put("/workspace", WorkspaceController, :update)
+    get("/workspace/automation", WorkspaceAutomationController, :show)
+    put("/workspace/automation", WorkspaceAutomationController, :update)
+
+    get(
+      "/workspace/automation/codex-connection",
+      WorkspaceAutomationController,
+      :codex_connection
+    )
+
+    put(
+      "/workspace/automation/codex-connection",
+      WorkspaceAutomationController,
+      :link_codex_connection
+    )
+
+    post(
+      "/workspace/automation/codex-connection/device",
+      WorkspaceAutomationController,
+      :start_codex_device_authorization
+    )
+
+    post(
+      "/workspace/automation/codex-connection/device/complete",
+      WorkspaceAutomationController,
+      :complete_codex_device_authorization
+    )
+
+    delete(
+      "/workspace/automation/codex-connection",
+      WorkspaceAutomationController,
+      :unlink_codex_connection
+    )
+
+    get(
+      "/workspace/automation/github-connection",
+      WorkspaceAutomationController,
+      :github_connection
+    )
+
+    put(
+      "/workspace/automation/github-connection",
+      WorkspaceAutomationController,
+      :link_github_connection
+    )
+
+    post(
+      "/workspace/automation/github-connection/sync",
+      WorkspaceAutomationController,
+      :sync_github_repositories
+    )
+
+    delete(
+      "/workspace/automation/github-connection",
+      WorkspaceAutomationController,
+      :unlink_github_connection
+    )
 
     # Workspace member management (owner only)
     resources("/workspace/members", WorkspaceMemberController, except: [:new, :edit])

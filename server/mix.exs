@@ -5,7 +5,7 @@ defmodule Missionspace.MixProject do
     [
       app: :missionspace,
       version: "0.1.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -20,7 +20,7 @@ defmodule Missionspace.MixProject do
   def application do
     [
       mod: {Missionspace.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :oban]
     ]
   end
 
@@ -48,7 +48,7 @@ defmodule Missionspace.MixProject do
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 1.0"},
+      {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
@@ -59,8 +59,11 @@ defmodule Missionspace.MixProject do
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:hackney, "~> 1.20"},
+      {:httpoison, "~> 2.2", override: true},
       {:sweet_xml, "~> 0.7"},
       {:web_push_encryption, "~> 0.3"},
+      {:jido, "~> 2.0.0-rc.4"},
+      {:oban, "~> 2.17"},
       {:tidewave, "~> 0.5", only: :dev},
       {:ex_machina, "~> 2.7", only: :test},
       {:faker, "~> 0.18", only: :test}

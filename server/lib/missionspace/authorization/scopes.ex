@@ -7,6 +7,7 @@ defmodule Missionspace.Authorization.Scopes do
 
   @action_scopes %{
     manage_workspace_members: "workspace:members:manage",
+    manage_workspace_automation: "workspace:automation:manage",
     manage_project_members: "project:members:manage",
     manage_projects: "project:manage",
     manage_item_members: "item:members:manage",

@@ -34,6 +34,39 @@ config :missionspace, Missionspace.Mailer, adapter: Swoosh.Adapters.Local
 # Email sender and frontend URL
 config :missionspace, :from_email, "noreply@missionspace.co"
 config :missionspace, :frontend_url, "http://localhost:5173"
+config :missionspace, :github_app_install_url, nil
+
+config :missionspace, :github_app,
+  app_id: nil,
+  private_key_pem: nil,
+  api_base_url: "https://api.github.com"
+
+config :missionspace, :codex_oauth,
+  auth_base_url: "https://auth.openai.com",
+  client_id: "app_EMoamEEZ73f0CkXaXp7hrann",
+  scope: "openid profile email offline_access api.connectors.read api.connectors.invoke",
+  originator: "codex_cli_rs",
+  callback_path: "/settings/automation",
+  state_max_age_seconds: 15 * 60
+
+config :missionspace, :sprite,
+  api_base_url: nil,
+  api_token: nil,
+  org_slug: nil,
+  execute_path: "/api/v1/agent-runs/execute",
+  status_path_template: "/api/v1/agent-runs/:session_id",
+  timeout_ms: 300_000,
+  poll_interval_ms: 2_000,
+  max_polls: 120
+
+config :missionspace, Missionspace.Jido,
+  max_tasks: 1_000,
+  agent_pools: []
+
+config :missionspace, Oban,
+  repo: Missionspace.Repo,
+  plugins: [{Oban.Plugins.Pruner, max_age: 60 * 60 * 24}],
+  queues: [automation: 2]
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,

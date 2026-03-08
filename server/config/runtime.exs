@@ -43,6 +43,83 @@ frontend_url = System.get_env("FRONTEND_URL", default_frontend_url)
 
 config :missionspace, :frontend_url, frontend_url
 
+parse_boolean_env = fn env_name, default ->
+  case System.get_env(env_name) do
+    nil ->
+      default
+
+    value ->
+      normalized_value =
+        value
+        |> String.trim()
+        |> String.downcase()
+
+      normalized_value in ["1", "true", "yes", "on"]
+  end
+end
+
+parse_integer_env = fn env_name, default ->
+  case System.get_env(env_name) do
+    nil ->
+      default
+
+    value ->
+      case Integer.parse(String.trim(value)) do
+        {parsed, ""} when parsed > 0 -> parsed
+        _ -> default
+      end
+  end
+end
+
+github_app_install_url =
+  case System.get_env("GITHUB_APP_INSTALL_URL") do
+    nil -> nil
+    "" -> nil
+    url -> String.trim(url)
+  end
+
+config :missionspace, :github_app_install_url, github_app_install_url
+
+config :missionspace, :github_app,
+  app_id: System.get_env("GITHUB_APP_ID"),
+  private_key_pem: System.get_env("GITHUB_APP_PRIVATE_KEY_PEM"),
+  api_base_url: System.get_env("GITHUB_API_BASE_URL", "https://api.github.com")
+
+default_codex_oauth_scope =
+  "openid profile email offline_access api.connectors.read api.connectors.invoke"
+
+config :missionspace, :codex_oauth,
+  auth_base_url: System.get_env("CODEX_OAUTH_BASE_URL", "https://auth.openai.com"),
+  client_id: System.get_env("CODEX_OAUTH_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann"),
+  scope: System.get_env("CODEX_OAUTH_SCOPE", default_codex_oauth_scope),
+  originator: System.get_env("CODEX_OAUTH_ORIGINATOR", "codex_cli_rs"),
+  callback_path: System.get_env("CODEX_OAUTH_CALLBACK_PATH", "/settings/automation"),
+  state_max_age_seconds: parse_integer_env.("CODEX_OAUTH_STATE_MAX_AGE_SECONDS", 15 * 60)
+
+config :missionspace, :sprite,
+  api_base_url: System.get_env("SPRITE_API_BASE_URL"),
+  api_token: System.get_env("SPRITE_API_TOKEN"),
+  org_slug: System.get_env("SPRITE_ORG_SLUG"),
+  execute_path: System.get_env("SPRITE_EXECUTE_PATH", "/api/v1/agent-runs/execute"),
+  status_path_template:
+    System.get_env("SPRITE_STATUS_PATH_TEMPLATE", "/api/v1/agent-runs/:session_id"),
+  timeout_ms: parse_integer_env.("SPRITE_TIMEOUT_MS", 300_000),
+  poll_interval_ms: parse_integer_env.("SPRITE_POLL_INTERVAL_MS", 2_000),
+  max_polls: parse_integer_env.("SPRITE_MAX_POLLS", 120)
+
+automation_worker_enabled = parse_boolean_env.("AUTOMATION_WORKER_ENABLED", true)
+
+automation_queue_limit = parse_integer_env.("AUTOMATION_MAX_CONCURRENCY", 2)
+
+automation_queues =
+  if automation_worker_enabled, do: [automation: automation_queue_limit], else: []
+
+config :missionspace,
+       Oban,
+       Keyword.merge(Application.get_env(:missionspace, Oban, []),
+         queues: automation_queues
+       )
+
 default_origins =
   if config_env() == :prod do
     [frontend_url, "https://missionspace.co", "https://www.missionspace.co"]

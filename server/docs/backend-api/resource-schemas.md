@@ -115,6 +115,87 @@ This page defines the core response objects reused across endpoints.
 }
 ```
 
+### `WorkspaceAutomationRepository`
+
+```json
+{
+  "id": "uuid",
+  "provider": "github",
+  "repo_owner": "string",
+  "repo_name": "string",
+  "default_branch": "string",
+  "enabled": true
+}
+```
+
+### `WorkspaceAutomationSettings`
+
+```json
+{
+  "id": "uuid",
+  "provider": "codex",
+  "execution_environment": "isolated",
+  "github_app_installation_id": "string|null",
+  "autonomous_execution_enabled": false,
+  "auto_open_prs": true,
+  "codex_api_key_configured": true,
+  "codex_api_key_last4": "string|null",
+  "codex_api_key_updated_at": "datetime|null",
+  "codex_auth_method": "api_key|chatgpt_oauth|null",
+  "codex_oauth_account_id": "string|null",
+  "codex_oauth_plan_type": "string|null",
+  "repositories": ["WorkspaceAutomationRepository"]
+}
+```
+
+### `WorkspaceAutomationCodexConnection`
+
+```json
+{
+  "provider": "codex",
+  "status": "connected|not_connected",
+  "connected": true,
+  "auth_method": "api_key|chatgpt_oauth|null",
+  "connect_url": "string|null",
+  "key_last4": "string|null",
+  "key_updated_at": "datetime|null",
+  "oauth_account_id": "string|null",
+  "oauth_plan_type": "string|null"
+}
+```
+
+### `WorkspaceAutomationCodexDeviceAuthorization`
+
+```json
+{
+  "device_auth_id": "string",
+  "user_code": "string",
+  "interval_seconds": 5,
+  "expires_at": "datetime|null",
+  "verification_url": "https://auth.openai.com/codex/device",
+  "status": "pending|optional"
+}
+```
+
+### `WorkspaceAutomationGitHubConnection`
+
+```json
+{
+  "provider": "github_app",
+  "status": "connected|not_connected",
+  "connected": true,
+  "installation_id": "string|null",
+  "connect_url": "string|null",
+  "repository_count": 3,
+  "account_login": "string|null",
+  "account_type": "string|null",
+  "account_avatar_url": "string|null",
+  "account_url": "string|null",
+  "app_slug": "string|null",
+  "repository_selection": "all|selected|null"
+}
+```
+
 ### `ProjectMember` (camelCase keys)
 
 ```json
