@@ -82,7 +82,7 @@ config :missionspace, :github_app_install_url, github_app_install_url
 
 config :missionspace, :github_app,
   app_id: System.get_env("GITHUB_APP_ID"),
-  private_key_pem: System.get_env("GITHUB_APP_PRIVATE_KEY_PEM"),
+  private_key_pem: System.get_env("GITHUB_APP_PRIVATE_KEY_PEM") |> Base.decode64!(),
   api_base_url: System.get_env("GITHUB_API_BASE_URL", "https://api.github.com")
 
 default_codex_oauth_scope =

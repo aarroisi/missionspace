@@ -28,4 +28,3 @@ missionspace-*.tar
 # Environment variables
 .env
 .env.local
-.envrc
